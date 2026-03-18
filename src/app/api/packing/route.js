@@ -20,6 +20,7 @@ export async function GET() {
     return Response.json({
       list,
       categories: categories.map((c) => ({
+        id: c.id,
         title: c.title,
         icon: c.icon,
         items: (c.items || []).map((i) => ({
