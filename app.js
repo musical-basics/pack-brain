@@ -7,10 +7,15 @@
   "use strict";
 
   const STORAGE_KEY = "packbrain-checked-items";
+  const DATA_STORAGE_KEY = "packbrain-item-overrides";
 
   // ── State ──────────────────────────────────────────────
   let checkedItems = loadCheckedItems();
   let activeFilter = "all";
+  let editingItemId = null;
+
+  // Apply saved overrides to PACKING_DATA on load
+  applyDataOverrides();
 
   // ── DOM Refs ───────────────────────────────────────────
   const mainContent = document.getElementById("mainContent");
@@ -53,8 +58,11 @@
           </div>
         </div>
         <ul class="item-list">
-          ${filteredItems.map((item) => renderItem(item, category.color)).join("")}
+          ${filteredItems.map((item) => renderItem(item, category)).join("")}
         </ul>
+        <button class="add-item-btn" data-cat-id="${category.id}">
+          <span>+</span> Add item
+        </button>
       `;
 
       mainContent.appendChild(section);
@@ -64,15 +72,76 @@
     mainContent.querySelectorAll(".item-checkbox").forEach((cb) => {
       cb.addEventListener("change", handleCheck);
     });
+
+    // Bind edit buttons
+    mainContent.querySelectorAll(".edit-btn").forEach((btn) => {
+      btn.addEventListener("click", handleEditClick);
+    });
+
+    // Bind delete buttons
+    mainContent.querySelectorAll(".delete-btn").forEach((btn) => {
+      btn.addEventListener("click", handleDeleteClick);
+    });
+
+    // Bind add-item buttons
+    mainContent.querySelectorAll(".add-item-btn").forEach((btn) => {
+      btn.addEventListener("click", handleAddItem);
+    });
+
+    // Bind edit form events
+    mainContent.querySelectorAll(".edit-form").forEach((form) => {
+      form.querySelector(".edit-save").addEventListener("click", handleEditSave);
+      form.querySelector(".edit-cancel").addEventListener("click", handleEditCancel);
+    });
   }
 
-  function renderItem(item, color) {
+  function renderItem(item, category) {
     const checked = checkedItems.has(item.id);
     const bagLabel = getBagLabel(item.bag);
     const bagClass = item.bag;
+    const color = category.color;
+    const isEditing = editingItemId === item.id;
+
+    if (isEditing) {
+      return `
+        <li class="item editing" data-bag="${item.bag}" data-id="${item.id}">
+          <div class="edit-form" data-id="${item.id}" data-cat-id="${category.id}">
+            <div class="edit-row">
+              <div class="edit-field">
+                <label class="edit-field-label">Name</label>
+                <input type="text" class="edit-input" name="name" value="${escapeHtml(item.name)}">
+              </div>
+              <div class="edit-field edit-field-sm">
+                <label class="edit-field-label">Qty</label>
+                <input type="number" class="edit-input" name="qty" value="${item.qty || ''}" min="0" placeholder="—">
+              </div>
+            </div>
+            <div class="edit-row">
+              <div class="edit-field">
+                <label class="edit-field-label">Note</label>
+                <input type="text" class="edit-input" name="note" value="${escapeHtml(item.note || '')}" placeholder="Optional note...">
+              </div>
+              <div class="edit-field edit-field-sm">
+                <label class="edit-field-label">Bag</label>
+                <select class="edit-select" name="bag">
+                  <option value="checked-bag" ${item.bag === 'checked-bag' ? 'selected' : ''}>🧳 Checked</option>
+                  <option value="backpack" ${item.bag === 'backpack' ? 'selected' : ''}>🎒 Backpack</option>
+                  <option value="worn" ${item.bag === 'worn' ? 'selected' : ''}>👟 On you</option>
+                  <option value="home" ${item.bag === 'home' ? 'selected' : ''}>🏠 Home</option>
+                </select>
+              </div>
+            </div>
+            <div class="edit-actions">
+              <button class="edit-save">✓ Save</button>
+              <button class="edit-cancel">Cancel</button>
+            </div>
+          </div>
+        </li>
+      `;
+    }
 
     return `
-      <li class="item ${checked ? "checked" : ""}" data-bag="${item.bag}">
+      <li class="item ${checked ? "checked" : ""}" data-bag="${item.bag}" data-id="${item.id}">
         <label class="item-label">
           <input type="checkbox" class="item-checkbox" data-id="${item.id}" ${checked ? "checked" : ""}>
           <span class="custom-checkbox" style="--cb-color: ${color}">
@@ -84,6 +153,12 @@
         <div class="item-meta">
           ${item.note ? `<span class="item-note">${item.note}</span>` : ""}
           <span class="bag-tag ${bagClass}">${bagLabel}</span>
+          <button class="edit-btn" data-id="${item.id}" title="Edit item">
+            <svg viewBox="0 0 16 16" width="14" height="14"><path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L3.463 11.1a.25.25 0 00-.064.108l-.631 2.208 2.208-.63a.25.25 0 00.108-.064l8.61-8.61a.25.25 0 000-.354l-1.086-1.086z" fill="currentColor"/></svg>
+          </button>
+          <button class="delete-btn" data-id="${item.id}" data-cat-id="${category.id}" title="Delete item">
+            <svg viewBox="0 0 16 16" width="14" height="14"><path d="M6.5 1.75a.25.25 0 01.25-.25h2.5a.25.25 0 01.25.25V3h-3V1.75zM11 3V1.75A1.75 1.75 0 009.25 0h-2.5A1.75 1.75 0 005 1.75V3H2.75a.75.75 0 000 1.5h.31l.69 9.112A1.75 1.75 0 005.502 15.5h4.996a1.75 1.75 0 001.752-1.888L12.94 4.5h.31a.75.75 0 000-1.5H11zm1.44 1.5H3.56l.68 8.953a.25.25 0 00.25.047h4.996a.25.25 0 00.25-.27L10.44 4.5z" fill="currentColor"/></svg>
+          </button>
         </div>
       </li>
     `;
@@ -265,6 +340,105 @@
     });
   }
 
+  // ── Edit Handling ───────────────────────────────────────
+  function handleEditClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = e.currentTarget.dataset.id;
+    editingItemId = id;
+    renderCategories();
+    // Focus the name input
+    const nameInput = mainContent.querySelector(`.edit-form[data-id="${id}"] input[name="name"]`);
+    if (nameInput) nameInput.focus();
+  }
+
+  function handleEditSave(e) {
+    const form = e.target.closest(".edit-form");
+    const itemId = form.dataset.id;
+    const catId = form.dataset.catId;
+
+    const newName = form.querySelector('input[name="name"]').value.trim();
+    const newQty = parseInt(form.querySelector('input[name="qty"]').value) || null;
+    const newNote = form.querySelector('input[name="note"]').value.trim();
+    const newBag = form.querySelector('select[name="bag"]').value;
+
+    if (!newName) return;
+
+    // Find and update the item in PACKING_DATA
+    const category = PACKING_DATA.find((c) => c.id === catId);
+    if (category) {
+      const item = category.items.find((i) => i.id === itemId);
+      if (item) {
+        item.name = newName;
+        item.qty = newQty;
+        item.note = newNote;
+        item.bag = newBag;
+      }
+    }
+
+    editingItemId = null;
+    saveDataOverrides();
+    renderCategories();
+    updateProgress();
+    updateStats();
+  }
+
+  function handleEditCancel() {
+    editingItemId = null;
+    renderCategories();
+  }
+
+  function handleDeleteClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const itemId = e.currentTarget.dataset.id;
+    const catId = e.currentTarget.dataset.catId;
+
+    const category = PACKING_DATA.find((c) => c.id === catId);
+    if (!category) return;
+
+    const item = category.items.find((i) => i.id === itemId);
+    if (!item) return;
+
+    if (!confirm(`Delete "${item.name}"?`)) return;
+
+    category.items = category.items.filter((i) => i.id !== itemId);
+    checkedItems.delete(itemId);
+    saveCheckedItems();
+    saveDataOverrides();
+    renderCategories();
+    updateProgress();
+    updateStats();
+  }
+
+  function handleAddItem(e) {
+    const catId = e.currentTarget.dataset.catId;
+    const category = PACKING_DATA.find((c) => c.id === catId);
+    if (!category) return;
+
+    const newId = `${catId}-${Date.now()}`;
+    category.items.push({
+      id: newId,
+      name: "New item",
+      qty: 1,
+      bag: category.id === "home-prep" ? "home" : "checked-bag",
+      note: "",
+    });
+
+    editingItemId = newId;
+    saveDataOverrides();
+    renderCategories();
+    updateProgress();
+    updateStats();
+
+    // Focus the name input and select all text
+    const nameInput = mainContent.querySelector(`.edit-form[data-id="${newId}"] input[name="name"]`);
+    if (nameInput) {
+      nameInput.focus();
+      nameInput.select();
+    }
+  }
+
   // ── Helpers ────────────────────────────────────────────
   function getBagLabel(bag) {
     const labels = {
@@ -274,6 +448,12 @@
       home: "🏠 Home",
     };
     return labels[bag] || bag;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   // ── Persistence ────────────────────────────────────────
@@ -288,5 +468,37 @@
 
   function saveCheckedItems() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...checkedItems]));
+  }
+
+  // Data overrides — persist item edits/additions/deletions
+  function saveDataOverrides() {
+    const snapshot = PACKING_DATA.map((cat) => ({
+      id: cat.id,
+      items: cat.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        qty: item.qty,
+        bag: item.bag,
+        note: item.note,
+      })),
+    }));
+    localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(snapshot));
+  }
+
+  function applyDataOverrides() {
+    try {
+      const data = localStorage.getItem(DATA_STORAGE_KEY);
+      if (!data) return;
+      const overrides = JSON.parse(data);
+
+      overrides.forEach((override) => {
+        const category = PACKING_DATA.find((c) => c.id === override.id);
+        if (category) {
+          category.items = override.items;
+        }
+      });
+    } catch {
+      // ignore corrupt data
+    }
   }
 })();
