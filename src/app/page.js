@@ -32,6 +32,9 @@ export default function PackingListPage() {
   const [editingId, setEditingId] = useState(null);
   const [mounted, setMounted] = useState(false);
 
+  // Track newly created items (not yet in DB)
+  const newItemIds = useRef(new Set());
+
   // Drag state refs (no re-render needed)
   const dragState = useRef({ itemId: null, catId: null });
 
@@ -112,15 +115,16 @@ export default function PackingListPage() {
   };
 
   const handleAdd = (catId) => {
-    const newId = `${catId}-${Date.now()}`;
+    const newId = `new-${Date.now()}`;
     const next = categories.map((c) =>
       c.id === catId
         ? {
             ...c,
-            items: [...c.items, { id: newId, name: "New item", qty: 1, bag: catId === "home-prep" ? "home" : "checked-bag", note: "" }],
+            items: [...c.items, { id: newId, name: "New item", qty: 1, bag: "checked-bag", note: "" }],
           }
         : c
     );
+    newItemIds.current.add(newId);
     persistCategories(next);
     setEditingId(newId);
   };
@@ -133,12 +137,22 @@ export default function PackingListPage() {
     );
     persistCategories(next);
     setEditingId(null);
-    // Persist to DB
-    fetch("/api/packing/items", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "update", itemId, fields: data }),
-    }).catch(console.error);
+
+    // Persist to DB — POST for new items, PATCH for existing
+    if (newItemIds.current.has(itemId)) {
+      newItemIds.current.delete(itemId);
+      fetch("/api/packing/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId, categoryId: catId, ...data }),
+      }).catch(console.error);
+    } else {
+      fetch("/api/packing/items", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update", itemId, fields: data }),
+      }).catch(console.error);
+    }
   };
 
   const handleReset = () => {

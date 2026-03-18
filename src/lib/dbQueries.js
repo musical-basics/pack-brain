@@ -56,6 +56,35 @@ export async function getCategories(listId) {
 }
 
 // ── Items ─────────────────────────────────────────────────
+export async function createItem({ id, categoryId, name, qty, bag, note }) {
+  const { data: maxOrder } = await supabase
+    .from("items")
+    .select("sort_order")
+    .eq("category_id", categoryId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
+
+  const sortOrder = (maxOrder?.sort_order ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from("items")
+    .insert({
+      id,
+      category_id: categoryId,
+      name: name || "New item",
+      qty: qty || 1,
+      bag: bag || "checked-bag",
+      note: note || "",
+      checked: false,
+      sort_order: sortOrder,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function toggleItemChecked(itemId, checked) {
   const { data, error } = await supabase
     .from("items")

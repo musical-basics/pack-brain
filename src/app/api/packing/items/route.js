@@ -1,6 +1,25 @@
-import { toggleItemChecked, updateItem, deleteItem, reorderItems } from "@/lib/dbQueries";
+import { createItem, toggleItemChecked, updateItem, deleteItem, reorderItems } from "@/lib/dbQueries";
 
 export const dynamic = "force-dynamic";
+
+// POST /api/packing/items — create a new item
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const item = await createItem({
+      id: body.id,
+      categoryId: body.categoryId,
+      name: body.name,
+      qty: body.qty,
+      bag: body.bag,
+      note: body.note,
+    });
+    return Response.json({ item });
+  } catch (err) {
+    console.error("POST /api/packing/items error:", err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
 
 // PATCH /api/packing/items — toggle checked, update fields, or reorder
 export async function PATCH(request) {
