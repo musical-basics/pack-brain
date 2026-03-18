@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PackBrain — Smart Packing Dashboard</title>
+  <meta name="description" content="Never forget what to pack again. Smart packing checklist with bag assignments and TSA compliance.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo-area">
+          <div class="logo-icon">🧳</div>
+          <div class="logo-text">
+            <h1>PackBrain</h1>
+            <p class="tagline">Pack smarter, not harder</p>
+          </div>
+        </div>
+        <div class="trip-info">
+          <div class="trip-badge">
+            <span class="trip-icon">✈️</span>
+            <span class="trip-dest">Parents' Home</span>
+          </div>
+          <div class="trip-meta">
+            <span class="trip-dates">6 days</span>
+            <span class="trip-divider">·</span>
+            <span class="trip-bags">1 checked + 1 backpack</span>
+          </div>
+        </div>
+        <div class="progress-area">
+          <div class="progress-ring-container">
+            <svg class="progress-ring" viewBox="0 0 80 80">
+              <circle class="progress-ring-bg" cx="40" cy="40" r="34" />
+              <circle class="progress-ring-fill" cx="40" cy="40" r="34" />
+            </svg>
+            <div class="progress-text">
+              <span class="progress-percent" id="progressPercent">0%</span>
+            </div>
+          </div>
+          <div class="progress-label">packed</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat" id="statCheckedBag">
+        <div class="stat-icon">🧳</div>
+        <div class="stat-info">
+          <div class="stat-value"><span id="checkedCount">0</span> items</div>
+          <div class="stat-label">Checked Bag</div>
+        </div>
+      </div>
+      <div class="stat" id="statBackpack">
+        <div class="stat-icon">🎒</div>
+        <div class="stat-info">
+          <div class="stat-value"><span id="backpackCount">0</span> items</div>
+          <div class="stat-label">Backpack</div>
+        </div>
+      </div>
+      <div class="stat" id="statWorn">
+        <div class="stat-icon">👟</div>
+        <div class="stat-info">
+          <div class="stat-value"><span id="wornCount">0</span> items</div>
+          <div class="stat-label">Worn / Pockets</div>
+        </div>
+      </div>
+      <div class="stat" id="statHome">
+        <div class="stat-icon">🏠</div>
+        <div class="stat-info">
+          <div class="stat-value"><span id="homeCount">0</span> items</div>
+          <div class="stat-label">Before Leaving</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="checked-bag">🧳 Checked Bag</button>
+      <button class="filter-btn" data-filter="backpack">🎒 Backpack</button>
+      <button class="filter-btn" data-filter="worn">👟 Worn</button>
+      <button class="filter-btn" data-filter="home">🏠 Home Prep</button>
+      <button class="filter-btn" data-filter="unchecked">⬜ Remaining</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main" id="mainContent">
+      <!-- Categories will be rendered by JS -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-actions">
+        <button class="btn btn-reset" id="btnReset" title="Reset all checkboxes">
+          <span>↺</span> Reset All
+        </button>
+        <button class="btn btn-export" id="btnExport" title="Copy list as text">
+          <span>📋</span> Copy List
+        </button>
+      </div>
+      <p class="footer-tip">💡 Progress saves automatically to your browser</p>
+    </footer>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
