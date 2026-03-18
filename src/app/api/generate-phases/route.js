@@ -50,9 +50,20 @@ export async function POST(request) {
     }
 
     // Parse the AI response
-    const parsed = parsePhases(result, items);
+    const parsed = parsePhases(result.text, items);
 
-    return Response.json(parsed);
+    // Calculate cost
+    const cost = calculateCost(model, result.usage);
+
+    return Response.json({
+      ...parsed,
+      usage: {
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+        totalTokens: result.usage.inputTokens + result.usage.outputTokens,
+        cost,
+      },
+    });
   } catch (err) {
     console.error("Phase generation error:", err);
     return Response.json(
@@ -69,13 +80,19 @@ async function callAnthropic(model, userMessage) {
 
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
-    model, // Use the raw model ID from the provider
+    model,
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
   });
 
-  return response.content[0].text;
+  return {
+    text: response.content[0].text,
+    usage: {
+      inputTokens: response.usage?.input_tokens || 0,
+      outputTokens: response.usage?.output_tokens || 0,
+    },
+  };
 }
 
 // ── Gemini ───────────────────────────────────────────────
@@ -85,12 +102,60 @@ async function callGemini(model, userMessage) {
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const genModel = genAI.getGenerativeModel({
-    model, // Use the raw model ID from the provider
+    model,
     systemInstruction: SYSTEM_PROMPT,
   });
 
   const result = await genModel.generateContent(userMessage);
-  return result.response.text();
+  const usageMetadata = result.response.usageMetadata || {};
+
+  return {
+    text: result.response.text(),
+    usage: {
+      inputTokens: usageMetadata.promptTokenCount || 0,
+      outputTokens: usageMetadata.candidatesTokenCount || 0,
+    },
+  };
+}
+
+// ── Pricing (per million tokens) ─────────────────────────
+const PRICING = [
+  // Anthropic
+  { match: "opus",   input: 15.00, output: 75.00 },
+  { match: "sonnet", input: 3.00,  output: 15.00 },
+  { match: "haiku",  input: 1.00,  output: 5.00  },
+  // Gemini
+  { match: "gemini-3.1-pro", input: 2.00,  output: 12.00 },
+  { match: "gemini-3-pro",   input: 2.00,  output: 12.00 },
+  { match: "gemini-3-flash", input: 0.50,  output: 3.00  },
+  { match: "gemini-2.5-pro", input: 1.25,  output: 10.00 },
+  { match: "gemini-2.5-flash-lite", input: 0.075, output: 0.30 },
+  { match: "gemini-2.5-flash", input: 0.30,  output: 2.50 },
+  { match: "gemini-2.0-flash-lite", input: 0.075, output: 0.30 },
+  { match: "gemini-2.0-flash", input: 0.075, output: 0.30 },
+  { match: "gemini-1.5-pro", input: 1.25,  output: 5.00  },
+  { match: "gemini-1.5-flash", input: 0.075, output: 0.30 },
+];
+
+function calculateCost(model, usage) {
+  const modelLower = model.toLowerCase();
+  const pricing = PRICING.find((p) => modelLower.includes(p.match));
+
+  if (!pricing) {
+    return { inputCost: 0, outputCost: 0, totalCost: 0, estimated: false };
+  }
+
+  const inputCost = (usage.inputTokens / 1_000_000) * pricing.input;
+  const outputCost = (usage.outputTokens / 1_000_000) * pricing.output;
+
+  return {
+    inputCost: Math.round(inputCost * 1_000_000) / 1_000_000, // 6 decimal places
+    outputCost: Math.round(outputCost * 1_000_000) / 1_000_000,
+    totalCost: Math.round((inputCost + outputCost) * 1_000_000) / 1_000_000,
+    estimated: true,
+    inputRate: pricing.input,
+    outputRate: pricing.output,
+  };
 }
 
 // ── Parse AI response ────────────────────────────────────

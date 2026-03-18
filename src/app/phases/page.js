@@ -26,6 +26,7 @@ export default function PhasesPage() {
   const [error, setError] = useState(null);
   const [expandedPhases, setExpandedPhases] = useState(new Set());
   const [mounted, setMounted] = useState(false);
+  const [usage, setUsage] = useState(null);
 
   useEffect(() => {
     setCategories(loadItems());
@@ -106,6 +107,7 @@ export default function PhasesPage() {
       setPhases(data.phases);
       savePhases(data.phases);
       setExpandedPhases(new Set([0]));
+      if (data.usage) setUsage(data.usage);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -118,6 +120,7 @@ export default function PhasesPage() {
       setPhases(null);
       clearPhases();
       setExpandedPhases(new Set());
+      setUsage(null);
     }
   };
 
@@ -233,6 +236,33 @@ export default function PhasesPage() {
 
       {/* Error */}
       {error && <div className="error-msg">⚠️ {error}</div>}
+
+      {/* Usage / Cost */}
+      {usage && (
+        <div className="usage-box">
+          <div className="usage-row">
+            <span className="usage-label">Input</span>
+            <span className="usage-value">{usage.inputTokens.toLocaleString()} tokens</span>
+            {usage.cost?.estimated && (
+              <span className="usage-cost">${usage.cost.inputCost.toFixed(6)} <span className="usage-rate">(${usage.cost.inputRate}/M)</span></span>
+            )}
+          </div>
+          <div className="usage-row">
+            <span className="usage-label">Output</span>
+            <span className="usage-value">{usage.outputTokens.toLocaleString()} tokens</span>
+            {usage.cost?.estimated && (
+              <span className="usage-cost">${usage.cost.outputCost.toFixed(6)} <span className="usage-rate">(${usage.cost.outputRate}/M)</span></span>
+            )}
+          </div>
+          <div className="usage-row usage-total">
+            <span className="usage-label">Total</span>
+            <span className="usage-value">{usage.totalTokens.toLocaleString()} tokens</span>
+            {usage.cost?.estimated && (
+              <span className="usage-cost">${usage.cost.totalCost.toFixed(6)}</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Phases content */}
       {!phases ? (

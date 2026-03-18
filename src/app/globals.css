@@ -958,6 +958,72 @@ body::before {
   font-size: 0.8rem;
 }
 
+/* Usage / Cost box */
+.usage-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 0.75rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.usage-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.usage-row + .usage-row {
+  border-top: 1px solid var(--border);
+}
+
+.usage-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  min-width: 50px;
+}
+
+.usage-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--text-secondary);
+  min-width: 110px;
+}
+
+.usage-cost {
+  margin-left: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--accent);
+}
+
+.usage-rate {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+}
+
+.usage-total {
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.usage-total .usage-label {
+  color: var(--text-primary);
+}
+
+.usage-total .usage-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.usage-total .usage-cost {
+  color: var(--success);
+  font-weight: 600;
+}
+
 /* ── Responsive ───────────────────────────────────────── */
 
 @media (max-width: 700px) {
