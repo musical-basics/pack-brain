@@ -174,6 +174,30 @@ export default function PackingListPage() {
     navigator.clipboard.writeText(`🧳 PackBrain\n${"═".repeat(30)}${lines.join("\n")}`);
   };
 
+  // ── Move item up/down (mobile-friendly reorder) ────────
+  const handleMoveItem = (catId, itemId, direction) => {
+    const next = categories.map((c) => {
+      if (c.id !== catId) return c;
+      const items = [...c.items];
+      const idx = items.findIndex((i) => i.id === itemId);
+      if (idx < 0) return c;
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= items.length) return c;
+      [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
+      return { ...c, items };
+    });
+    persistCategories(next);
+    // Persist reorder to DB
+    const cat = next.find((c) => c.id === catId);
+    if (cat) {
+      fetch("/api/packing/items", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reorder", itemIds: cat.items.map((i) => i.id) }),
+      }).catch(console.error);
+    }
+  };
+
   // ── Drag & Drop ────────────────────────────────────────
   const onDragStart = (e, itemId, catId) => {
     dragState.current = { itemId, catId };
@@ -389,6 +413,20 @@ export default function PackingListPage() {
                       <div className="item-meta">
                         {item.note && <span className="item-note">{item.note}</span>}
                         <span className={`bag-tag ${item.bag}`}>{getBagLabel(item.bag)}</span>
+                        <div className="mobile-reorder-btns">
+                          <button
+                            className="move-btn"
+                            onClick={() => handleMoveItem(cat.id, item.id, "up")}
+                            disabled={filtered.indexOf(item) === 0}
+                            aria-label="Move up"
+                          >▲</button>
+                          <button
+                            className="move-btn"
+                            onClick={() => handleMoveItem(cat.id, item.id, "down")}
+                            disabled={filtered.indexOf(item) === filtered.length - 1}
+                            aria-label="Move down"
+                          >▼</button>
+                        </div>
                         <button className="edit-btn" onClick={() => setEditingId(item.id)}><EditIcon /></button>
                         <button className="delete-btn" onClick={() => handleDelete(cat.id, item.id)}><TrashIcon /></button>
                       </div>

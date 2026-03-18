@@ -211,6 +211,22 @@ export default function PhasesPage() {
   // Strip "Phase N:" prefix from AI-generated titles
   const cleanTitle = (title) => title.replace(/^Phase\s*\d+\s*[:–—-]\s*/i, "");
 
+  // ── Move phase up/down (mobile-friendly reorder) ──────
+  const handleMovePhase = (idx, direction) => {
+    const newIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= phases.length) return;
+    const next = [...phases];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    setPhases(next);
+    setExpandedPhases(new Set());
+    // Persist to DB
+    fetch("/api/packing/phases", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phases: next }),
+    }).catch(console.error);
+  };
+
   // ── Phase progress ─────────────────────────────────────
   const getPhaseProgress = (phase) => {
     if (!phase || !phase.itemIds) return { done: 0, total: 0 };
@@ -406,6 +422,20 @@ export default function PhasesPage() {
                       <path d="M8 10.825L2.175 5 3.238 3.938 8 8.7l4.762-4.762L13.825 5z" />
                     </svg>
                   </span>
+                  <div className="mobile-reorder-btns phase-mobile-reorder">
+                    <button
+                      className="move-btn"
+                      onClick={(e) => { e.stopPropagation(); handleMovePhase(idx, "up"); }}
+                      disabled={idx === 0}
+                      aria-label="Move phase up"
+                    >▲</button>
+                    <button
+                      className="move-btn"
+                      onClick={(e) => { e.stopPropagation(); handleMovePhase(idx, "down"); }}
+                      disabled={idx === phases.length - 1}
+                      aria-label="Move phase down"
+                    >▼</button>
+                  </div>
                 </div>
 
                 <div className="phase-card-body">
