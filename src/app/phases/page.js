@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,6 +27,9 @@ export default function PhasesPage() {
   const [expandedPhases, setExpandedPhases] = useState(new Set());
   const [mounted, setMounted] = useState(false);
   const [usage, setUsage] = useState(null);
+
+  // Drag state for phase reordering
+  const phaseDrag = useRef({ fromIdx: null });
 
   useEffect(() => {
     setCategories(loadItems());
@@ -128,6 +131,52 @@ export default function PhasesPage() {
     const next = new Set(expandedPhases);
     next.has(idx) ? next.delete(idx) : next.add(idx);
     setExpandedPhases(next);
+  };
+
+  // ── Phase drag-to-reorder ──────────────────────────────
+  const onPhaseDragStart = (e, idx) => {
+    phaseDrag.current.fromIdx = idx;
+    e.dataTransfer.effectAllowed = "move";
+    e.currentTarget.classList.add("phase-dragging");
+    requestAnimationFrame(() => e.currentTarget.classList.add("phase-ghost"));
+  };
+
+  const onPhaseDragEnd = (e) => {
+    e.currentTarget.classList.remove("phase-dragging", "phase-ghost");
+    document.querySelectorAll(".phase-drag-before, .phase-drag-after").forEach((el) =>
+      el.classList.remove("phase-drag-before", "phase-drag-after")
+    );
+    phaseDrag.current.fromIdx = null;
+  };
+
+  const onPhaseDragOver = (e, idx) => {
+    e.preventDefault();
+    if (phaseDrag.current.fromIdx === null || phaseDrag.current.fromIdx === idx) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+    document.querySelectorAll(".phase-drag-before, .phase-drag-after").forEach((el) =>
+      el.classList.remove("phase-drag-before", "phase-drag-after")
+    );
+    e.currentTarget.classList.add(pos === "before" ? "phase-drag-before" : "phase-drag-after");
+  };
+
+  const onPhaseDrop = (e, toIdx) => {
+    e.preventDefault();
+    const fromIdx = phaseDrag.current.fromIdx;
+    if (fromIdx === null || fromIdx === toIdx) return;
+
+    const next = [...phases];
+    const [moved] = next.splice(fromIdx, 1);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const insertIdx = e.clientY < rect.top + rect.height / 2 ? toIdx : toIdx + 1;
+    const adjustedIdx = fromIdx < toIdx ? insertIdx - 1 : insertIdx;
+    next.splice(Math.max(0, adjustedIdx), 0, moved);
+
+    setPhases(next);
+    savePhases(next);
+
+    // Remap expanded phases
+    setExpandedPhases(new Set());
   };
 
   // ── Phase progress ─────────────────────────────────────
@@ -289,8 +338,27 @@ export default function PhasesPage() {
               <div
                 key={idx}
                 className={`phase-card ${isComplete ? "completed-phase" : isActive ? "active-phase" : ""} ${isExpanded ? "expanded" : ""}`}
+                draggable
+                onDragStart={(e) => onPhaseDragStart(e, idx)}
+                onDragEnd={onPhaseDragEnd}
+                onDragOver={(e) => onPhaseDragOver(e, idx)}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    e.currentTarget.classList.remove("phase-drag-before", "phase-drag-after");
+                  }
+                }}
+                onDrop={(e) => onPhaseDrop(e, idx)}
               >
                 <div className="phase-card-header" onClick={() => togglePhase(idx)}>
+                  <span
+                    className="phase-drag-handle"
+                    title="Drag to reorder"
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <svg viewBox="0 0 16 16" width="14" height="14">
+                      <path d="M5 3h2v2H5zM9 3h2v2H9zM5 7h2v2H5zM9 7h2v2H9zM5 11h2v2H5zM9 11h2v2H9z" fill="currentColor" />
+                    </svg>
+                  </span>
                   <div className="phase-number">
                     {isComplete ? "✓" : idx + 1}
                   </div>

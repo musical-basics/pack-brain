@@ -881,6 +881,29 @@ body::before {
   transform: rotate(180deg);
 }
 
+/* Phase drag handle */
+.phase-drag-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 24px;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: grab;
+  transition: opacity var(--transition);
+  border-radius: 4px;
+}
+
+.phase-card:hover .phase-drag-handle { opacity: 0.4; }
+.phase-drag-handle:hover { opacity: 1 !important; background: var(--bg-surface); }
+.phase-drag-handle:active { cursor: grabbing; }
+
+.phase-card.phase-ghost { opacity: 0.2; }
+.phase-card.phase-drag-before { box-shadow: 0 -3px 0 0 var(--accent); }
+.phase-card.phase-drag-after { box-shadow: 0 3px 0 0 var(--accent); }
+
 .phase-card-body {
   max-height: 0;
   overflow: hidden;
