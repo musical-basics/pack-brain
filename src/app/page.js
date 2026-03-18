@@ -4,10 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  loadItems,
-  saveItems,
-  loadCheckedItems,
-  saveCheckedItems,
   getBagLabel,
 } from "@/lib/packingData";
 
@@ -40,20 +36,30 @@ export default function PackingListPage() {
   const dragState = useRef({ itemId: null, catId: null });
 
   useEffect(() => {
-    setCategories(loadItems());
-    setCheckedItems(loadCheckedItems());
-    setMounted(true);
+    fetch("/api/packing")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.categories) {
+          setCategories(data.categories);
+          // Build checked set from item.checked fields
+          const checked = new Set();
+          data.categories.forEach((c) =>
+            c.items.forEach((i) => { if (i.checked) checked.add(i.id); })
+          );
+          setCheckedItems(checked);
+        }
+      })
+      .catch((err) => console.error("Failed to load packing data:", err))
+      .finally(() => setMounted(true));
   }, []);
 
   // ── Persist ────────────────────────────────────────────
   const persistCategories = useCallback((cats) => {
     setCategories(cats);
-    saveItems(cats);
   }, []);
 
   const persistChecked = useCallback((nextChecked) => {
     setCheckedItems(nextChecked);
-    saveCheckedItems(nextChecked);
   }, []);
 
   // ── Computed ───────────────────────────────────────────
@@ -77,8 +83,15 @@ export default function PackingListPage() {
   // ── Handlers ───────────────────────────────────────────
   const handleCheck = (id) => {
     const next = new Set(checkedItems);
-    next.has(id) ? next.delete(id) : next.add(id);
+    const newChecked = !next.has(id);
+    newChecked ? next.add(id) : next.delete(id);
     persistChecked(next);
+    // Persist to DB
+    fetch("/api/packing/items", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggle", itemId: id, checked: newChecked }),
+    }).catch(console.error);
   };
 
   const handleDelete = (catId, itemId) => {
@@ -90,6 +103,12 @@ export default function PackingListPage() {
     nextChecked.delete(itemId);
     persistCategories(next);
     persistChecked(nextChecked);
+    // Persist to DB
+    fetch("/api/packing/items", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId }),
+    }).catch(console.error);
   };
 
   const handleAdd = (catId) => {
@@ -114,6 +133,12 @@ export default function PackingListPage() {
     );
     persistCategories(next);
     setEditingId(null);
+    // Persist to DB
+    fetch("/api/packing/items", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", itemId, fields: data }),
+    }).catch(console.error);
   };
 
   const handleReset = () => {
@@ -182,6 +207,15 @@ export default function PackingListPage() {
       return { ...c, items };
     });
     persistCategories(next);
+    // Persist reorder to DB
+    const cat = next.find((c) => c.id === catId);
+    if (cat) {
+      fetch("/api/packing/items", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reorder", itemIds: cat.items.map((i) => i.id) }),
+      }).catch(console.error);
+    }
   };
 
   // Progress ring

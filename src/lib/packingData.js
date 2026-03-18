@@ -114,6 +114,9 @@ export const PACKING_DATA = [
   },
 ];
 
+// Alias for server-side seed import
+export const DEFAULT_CATEGORIES = PACKING_DATA;
+
 // ── localStorage Helpers ─────────────────────────────────
 const CHECKED_KEY = "packbrain-checked-items";
 const DATA_KEY = "packbrain-item-overrides";

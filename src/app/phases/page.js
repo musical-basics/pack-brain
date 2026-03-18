@@ -4,12 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  loadItems,
-  loadCheckedItems,
-  saveCheckedItems,
-  loadPhases,
-  savePhases,
-  clearPhases,
   getBagLabel,
 } from "@/lib/packingData";
 
@@ -32,14 +26,25 @@ export default function PhasesPage() {
   const phaseDrag = useRef({ fromIdx: null });
 
   useEffect(() => {
-    setCategories(loadItems());
-    setCheckedItems(loadCheckedItems());
-    const saved = loadPhases();
-    if (saved) {
-      setPhases(saved);
-      if (saved.length > 0) setExpandedPhases(new Set([0]));
-    }
-    setMounted(true);
+    // Load all data from DB
+    fetch("/api/packing")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.categories) {
+          setCategories(data.categories);
+          const checked = new Set();
+          data.categories.forEach((c) =>
+            c.items.forEach((i) => { if (i.checked) checked.add(i.id); })
+          );
+          setCheckedItems(checked);
+        }
+        if (data.phases && data.phases.length > 0) {
+          setPhases(data.phases);
+          setExpandedPhases(new Set([0]));
+        }
+      })
+      .catch((err) => console.error("Failed to load packing data:", err))
+      .finally(() => setMounted(true));
 
     // Fetch available models from providers
     fetch("/api/list-models")
@@ -70,9 +75,15 @@ export default function PhasesPage() {
   // ── Check handling ─────────────────────────────────────
   const handleCheck = (id) => {
     const next = new Set(checkedItems);
-    next.has(id) ? next.delete(id) : next.add(id);
+    const newChecked = !next.has(id);
+    newChecked ? next.add(id) : next.delete(id);
     setCheckedItems(next);
-    saveCheckedItems(next);
+    // Persist to DB
+    fetch("/api/packing/items", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "toggle", itemId: id, checked: newChecked }),
+    }).catch(console.error);
   };
 
   // ── Generate phases via AI ─────────────────────────────
@@ -108,9 +119,14 @@ export default function PhasesPage() {
 
       const data = await res.json();
       setPhases(data.phases);
-      savePhases(data.phases);
       setExpandedPhases(new Set([0]));
       if (data.usage) setUsage(data.usage);
+      // Persist phases to DB
+      fetch("/api/packing/phases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phases: data.phases }),
+      }).catch(console.error);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -121,9 +137,10 @@ export default function PhasesPage() {
   const handleClearPhases = () => {
     if (confirm("Clear all phases? You can regenerate them.")) {
       setPhases(null);
-      clearPhases();
       setExpandedPhases(new Set());
       setUsage(null);
+      // Clear from DB
+      fetch("/api/packing/phases", { method: "DELETE" }).catch(console.error);
     }
   };
 
@@ -173,11 +190,20 @@ export default function PhasesPage() {
     next.splice(Math.max(0, adjustedIdx), 0, moved);
 
     setPhases(next);
-    savePhases(next);
 
     // Remap expanded phases
     setExpandedPhases(new Set());
+
+    // Persist new order to DB
+    fetch("/api/packing/phases", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phases: next }),
+    }).catch(console.error);
   };
+
+  // Strip "Phase N:" prefix from AI-generated titles
+  const cleanTitle = (title) => title.replace(/^Phase\s*\d+\s*[:–—-]\s*/i, "");
 
   // ── Phase progress ─────────────────────────────────────
   const getPhaseProgress = (phase) => {
@@ -363,7 +389,7 @@ export default function PhasesPage() {
                     {isComplete ? "✓" : idx + 1}
                   </div>
                   <div className="phase-title-area">
-                    <div className="phase-title">{phase.title}</div>
+                    <div className="phase-title">{cleanTitle(phase.title)}</div>
                     <div className="phase-description">{phase.description}</div>
                   </div>
                   <span className={`phase-progress-badge ${isComplete ? "done" : ""}`}>
