@@ -13,19 +13,15 @@ import {
   getBagLabel,
 } from "@/lib/packingData";
 
-const MODELS = [
-  { id: "claude-sonnet", label: "Claude 3.5 Sonnet", provider: "anthropic" },
-  { id: "claude-haiku", label: "Claude 3.5 Haiku", provider: "anthropic" },
-  { id: "gemini-flash", label: "Gemini 2.0 Flash", provider: "gemini" },
-  { id: "gemini-pro", label: "Gemini 1.5 Pro", provider: "gemini" },
-];
 
 export default function PhasesPage() {
   const pathname = usePathname();
   const [categories, setCategories] = useState([]);
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [phases, setPhases] = useState(null);
-  const [selectedModel, setSelectedModel] = useState("claude-sonnet");
+  const [models, setModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [selectedModel, setSelectedModel] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [expandedPhases, setExpandedPhases] = useState(new Set());
@@ -37,10 +33,24 @@ export default function PhasesPage() {
     const saved = loadPhases();
     if (saved) {
       setPhases(saved);
-      // Auto-expand first uncompleted phase
       if (saved.length > 0) setExpandedPhases(new Set([0]));
     }
     setMounted(true);
+
+    // Fetch available models from providers
+    fetch("/api/list-models")
+      .then((r) => r.json())
+      .then((data) => {
+        setModels(data.models || []);
+        if (data.models?.length > 0) {
+          setSelectedModel(data.models[0].id);
+        }
+        if (data.errors?.length > 0) {
+          console.warn("Model fetch warnings:", data.errors);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch models:", err))
+      .finally(() => setModelsLoading(false));
   }, []);
 
   // ── Progress ───────────────────────────────────────────
@@ -78,10 +88,13 @@ export default function PhasesPage() {
         }))
       );
 
+      const selectedModelObj = models.find((m) => m.id === selectedModel);
+      const provider = selectedModelObj?.provider || (selectedModel.includes("claude") ? "anthropic" : "gemini");
+
       const res = await fetch("/api/generate-phases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, model: selectedModel }),
+        body: JSON.stringify({ items, model: selectedModel, provider }),
       });
 
       if (!res.ok) {
@@ -171,16 +184,36 @@ export default function PhasesPage() {
               className="model-select"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={modelsLoading}
             >
-              {MODELS.map((m) => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
+              {modelsLoading ? (
+                <option>Loading models...</option>
+              ) : models.length === 0 ? (
+                <option>No models available (check API keys)</option>
+              ) : (
+                <>
+                  {models.some((m) => m.provider === "anthropic") && (
+                    <optgroup label="Anthropic (Claude)">
+                      {models.filter((m) => m.provider === "anthropic").map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {models.some((m) => m.provider === "gemini") && (
+                    <optgroup label="Google (Gemini)">
+                      {models.filter((m) => m.provider === "gemini").map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
+              )}
             </select>
           </div>
           <button
             className={`btn-generate ${loading ? "loading" : ""}`}
             onClick={generatePhases}
-            disabled={loading}
+            disabled={loading || modelsLoading || models.length === 0}
           >
             {loading ? (
               <><span className="loading-spinner" /> Thinking...</>

@@ -31,7 +31,7 @@ IMPORTANT: Respond with ONLY valid JSON in this exact format, no markdown, no ex
 
 export async function POST(request) {
   try {
-    const { items, model } = await request.json();
+    const { items, model, provider } = await request.json();
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return Response.json({ error: "No items provided" }, { status: 400 });
@@ -41,12 +41,12 @@ export async function POST(request) {
 
     let result;
 
-    if (model.startsWith("claude")) {
+    if (provider === "anthropic" || model.includes("claude")) {
       result = await callAnthropic(model, userMessage);
-    } else if (model.startsWith("gemini")) {
+    } else if (provider === "gemini" || model.includes("gemini")) {
       result = await callGemini(model, userMessage);
     } else {
-      return Response.json({ error: `Unknown model: ${model}` }, { status: 400 });
+      return Response.json({ error: `Unknown provider for model: ${model}` }, { status: 400 });
     }
 
     // Parse the AI response
@@ -67,14 +67,9 @@ async function callAnthropic(model, userMessage) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set in .env.local");
 
-  const modelMap = {
-    "claude-sonnet": "claude-sonnet-4-20250514",
-    "claude-haiku": "claude-haiku-4-20250514",
-  };
-
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
-    model: modelMap[model] || "claude-sonnet-4-20250514",
+    model, // Use the raw model ID from the provider
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
@@ -88,14 +83,9 @@ async function callGemini(model, userMessage) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY not set in .env.local");
 
-  const modelMap = {
-    "gemini-flash": "gemini-2.0-flash",
-    "gemini-pro": "gemini-1.5-pro",
-  };
-
   const genAI = new GoogleGenerativeAI(apiKey);
   const genModel = genAI.getGenerativeModel({
-    model: modelMap[model] || "gemini-2.0-flash",
+    model, // Use the raw model ID from the provider
     systemInstruction: SYSTEM_PROMPT,
   });
 
