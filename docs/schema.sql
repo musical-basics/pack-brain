@@ -1,14 +1,13 @@
 -- PackBrain Database Schema
--- Run this against your local postgres (local-db container)
--- Connection: postgres://postgres:password@localhost:5432/packbrain
+-- Run this in Supabase SQL Editor (or against your local postgres)
+-- Uses a dedicated "packbrain" schema instead of "public"
 
--- 1. Create the database (run this first, then connect to it)
--- CREATE DATABASE packbrain;
+-- 1. Create the schema
+CREATE SCHEMA IF NOT EXISTS packbrain;
 
--- 2. Then run the rest against the packbrain database:
+-- 2. Tables
 
--- Packing lists (trips)
-CREATE TABLE IF NOT EXISTS packing_lists (
+CREATE TABLE IF NOT EXISTS packbrain.packing_lists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL DEFAULT 'My Trip',
   destination TEXT,
@@ -17,20 +16,18 @@ CREATE TABLE IF NOT EXISTS packing_lists (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Categories within a list
-CREATE TABLE IF NOT EXISTS categories (
+CREATE TABLE IF NOT EXISTS packbrain.categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  list_id UUID NOT NULL REFERENCES packing_lists(id) ON DELETE CASCADE,
+  list_id UUID NOT NULL REFERENCES packbrain.packing_lists(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   icon TEXT DEFAULT '📦',
   sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Items within a category
-CREATE TABLE IF NOT EXISTS items (
-  id TEXT PRIMARY KEY, -- matches the item IDs from the app (e.g. "underwear")
-  category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS packbrain.items (
+  id TEXT PRIMARY KEY,
+  category_id UUID NOT NULL REFERENCES packbrain.categories(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   qty INTEGER DEFAULT 1,
   bag TEXT DEFAULT 'checked-bag',
@@ -41,18 +38,19 @@ CREATE TABLE IF NOT EXISTS items (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- AI-generated phases
-CREATE TABLE IF NOT EXISTS phases (
+CREATE TABLE IF NOT EXISTS packbrain.phases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  list_id UUID NOT NULL REFERENCES packing_lists(id) ON DELETE CASCADE,
+  list_id UUID NOT NULL REFERENCES packbrain.packing_lists(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
-  item_ids TEXT[] DEFAULT '{}', -- array of item IDs
+  item_ids TEXT[] DEFAULT '{}',
   sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Index for common lookups
-CREATE INDEX IF NOT EXISTS idx_categories_list ON categories(list_id);
-CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
-CREATE INDEX IF NOT EXISTS idx_phases_list ON phases(list_id);
+-- 3. Grant access for the service role (needed for Supabase JS client)
+GRANT USAGE ON SCHEMA packbrain TO service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA packbrain TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA packbrain TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA packbrain GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA packbrain GRANT ALL ON SEQUENCES TO service_role;

@@ -10,6 +10,7 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl || "", supabaseKey || "", {
   auth: { persistSession: false, autoRefreshToken: false },
+  db: { schema: "packbrain" },
 });
 
 export default supabase;
