@@ -27,9 +27,14 @@ export default function PhasesPage() {
 
   useEffect(() => {
     // Load all data from DB
-    fetch("/api/packing")
+    fetch("/api/packing", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
+        console.log("[PackBrain] /api/packing response:", { 
+          categoriesCount: data.categories?.length,
+          phasesCount: data.phases?.length,
+          phases: data.phases,
+        });
         if (data.categories) {
           setCategories(data.categories);
           const checked = new Set();
@@ -39,6 +44,7 @@ export default function PhasesPage() {
           setCheckedItems(checked);
         }
         if (data.phases && data.phases.length > 0) {
+          console.log("[PackBrain] Setting phases:", data.phases.length);
           setPhases(data.phases);
           setExpandedPhases(new Set([0]));
         }

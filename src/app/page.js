@@ -36,7 +36,7 @@ export default function PackingListPage() {
   const dragState = useRef({ itemId: null, catId: null });
 
   useEffect(() => {
-    fetch("/api/packing")
+    fetch("/api/packing", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         if (data.categories) {
