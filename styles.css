@@ -414,6 +414,61 @@ body::before {
   color: var(--text-muted);
 }
 
+/* ── Drag Handle ──────────────────────────────────────── */
+
+.drag-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 24px;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: grab;
+  transition: all var(--transition);
+  border-radius: 4px;
+  margin-left: -4px;
+}
+
+.item:hover .drag-handle {
+  opacity: 0.5;
+}
+
+.drag-handle:hover {
+  opacity: 1 !important;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* ── Drag States ──────────────────────────────────────── */
+
+.item.dragging {
+  opacity: 1;
+}
+
+.item.drag-ghost {
+  opacity: 0.25;
+}
+
+.item.drag-over-before {
+  box-shadow: 0 -2px 0 0 var(--accent);
+}
+
+.item.drag-over-after {
+  box-shadow: 0 2px 0 0 var(--accent);
+}
+
+.item.drag-over-before,
+.item.drag-over-after {
+  background: rgba(108, 99, 255, 0.06);
+  border-radius: var(--radius-sm);
+}
+
 /* ── Custom Checkbox ──────────────────────────────────── */
 
 .item-label {

@@ -14,6 +14,12 @@
   let activeFilter = "all";
   let editingItemId = null;
 
+  // Drag state
+  let dragItemId = null;
+  let dragCatId = null;
+  let dragOverItemId = null;
+  let dragOverPosition = null; // 'before' or 'after'
+
   // Apply saved overrides to PACKING_DATA on load
   applyDataOverrides();
 
@@ -57,7 +63,7 @@
             <div class="category-progress-fill" style="width: ${(checkedCount / totalCount) * 100}%; background: ${category.color}"></div>
           </div>
         </div>
-        <ul class="item-list">
+        <ul class="item-list" data-cat-id="${category.id}">
           ${filteredItems.map((item) => renderItem(item, category)).join("")}
         </ul>
         <button class="add-item-btn" data-cat-id="${category.id}">
@@ -93,6 +99,9 @@
       form.querySelector(".edit-save").addEventListener("click", handleEditSave);
       form.querySelector(".edit-cancel").addEventListener("click", handleEditCancel);
     });
+
+    // Setup drag-and-drop
+    setupDragAndDrop();
   }
 
   function renderItem(item, category) {
@@ -104,7 +113,7 @@
 
     if (isEditing) {
       return `
-        <li class="item editing" data-bag="${item.bag}" data-id="${item.id}">
+        <li class="item editing" data-bag="${item.bag}" data-id="${item.id}" data-cat-id="${category.id}">
           <div class="edit-form" data-id="${item.id}" data-cat-id="${category.id}">
             <div class="edit-row">
               <div class="edit-field">
@@ -141,7 +150,10 @@
     }
 
     return `
-      <li class="item ${checked ? "checked" : ""}" data-bag="${item.bag}" data-id="${item.id}">
+      <li class="item ${checked ? "checked" : ""}" data-bag="${item.bag}" data-id="${item.id}" data-cat-id="${category.id}" draggable="true">
+        <span class="drag-handle" title="Drag to reorder">
+          <svg viewBox="0 0 16 16" width="14" height="14"><path d="M5 3h2v2H5zM9 3h2v2H9zM5 7h2v2H5zM9 7h2v2H9zM5 11h2v2H5zM9 11h2v2H9z" fill="currentColor"/></svg>
+        </span>
         <label class="item-label">
           <input type="checkbox" class="item-checkbox" data-id="${item.id}" ${checked ? "checked" : ""}>
           <span class="custom-checkbox" style="--cb-color: ${color}">
@@ -437,6 +449,134 @@
       nameInput.focus();
       nameInput.select();
     }
+  }
+
+  // ── Drag & Drop ────────────────────────────────────────
+  function setupDragAndDrop() {
+    const items = mainContent.querySelectorAll(".item[draggable='true']");
+
+    items.forEach((item) => {
+      item.addEventListener("dragstart", onDragStart);
+      item.addEventListener("dragend", onDragEnd);
+      item.addEventListener("dragover", onDragOver);
+      item.addEventListener("dragleave", onDragLeave);
+      item.addEventListener("drop", onDrop);
+    });
+
+    // Also allow dropping on item-lists (for empty regions)
+    mainContent.querySelectorAll(".item-list").forEach((list) => {
+      list.addEventListener("dragover", (e) => e.preventDefault());
+      list.addEventListener("drop", onDrop);
+    });
+  }
+
+  function onDragStart(e) {
+    const li = e.target.closest(".item");
+    if (!li) return;
+
+    dragItemId = li.dataset.id;
+    dragCatId = li.dataset.catId;
+
+    li.classList.add("dragging");
+
+    // Set drag image slightly transparent
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", dragItemId);
+
+    // Delay adding class so the drag image renders from the original
+    requestAnimationFrame(() => {
+      li.classList.add("drag-ghost");
+    });
+  }
+
+  function onDragEnd(e) {
+    const li = e.target.closest(".item");
+    if (li) {
+      li.classList.remove("dragging", "drag-ghost");
+    }
+
+    // Clear all indicators
+    mainContent.querySelectorAll(".drag-over-before, .drag-over-after").forEach((el) => {
+      el.classList.remove("drag-over-before", "drag-over-after");
+    });
+
+    dragItemId = null;
+    dragCatId = null;
+    dragOverItemId = null;
+    dragOverPosition = null;
+  }
+
+  function onDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    const li = e.target.closest(".item[draggable='true']");
+    if (!li || li.dataset.id === dragItemId) return;
+    if (li.dataset.catId !== dragCatId) return; // Only within same category
+
+    const rect = li.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const position = e.clientY < midY ? "before" : "after";
+
+    // Only update if changed
+    if (dragOverItemId !== li.dataset.id || dragOverPosition !== position) {
+      // Clear old indicators
+      mainContent.querySelectorAll(".drag-over-before, .drag-over-after").forEach((el) => {
+        el.classList.remove("drag-over-before", "drag-over-after");
+      });
+
+      dragOverItemId = li.dataset.id;
+      dragOverPosition = position;
+
+      li.classList.add(position === "before" ? "drag-over-before" : "drag-over-after");
+    }
+  }
+
+  function onDragLeave(e) {
+    const li = e.target.closest(".item");
+    if (!li) return;
+
+    // Only clear if actually leaving the element
+    const related = e.relatedTarget;
+    if (related && li.contains(related)) return;
+
+    li.classList.remove("drag-over-before", "drag-over-after");
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+
+    if (!dragItemId || !dragCatId) return;
+
+    const targetLi = e.target.closest(".item[draggable='true']");
+    if (!targetLi || targetLi.dataset.id === dragItemId) return;
+    if (targetLi.dataset.catId !== dragCatId) return;
+
+    const category = PACKING_DATA.find((c) => c.id === dragCatId);
+    if (!category) return;
+
+    const fromIdx = category.items.findIndex((i) => i.id === dragItemId);
+    const toIdx = category.items.findIndex((i) => i.id === targetLi.dataset.id);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    // Remove the dragged item
+    const [movedItem] = category.items.splice(fromIdx, 1);
+
+    // Calculate insert position
+    const rect = targetLi.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const dropPosition = e.clientY < midY ? "before" : "after";
+
+    // Find the new index of the target (after removal)
+    const newToIdx = category.items.findIndex((i) => i.id === targetLi.dataset.id);
+    const insertIdx = dropPosition === "before" ? newToIdx : newToIdx + 1;
+
+    category.items.splice(insertIdx, 0, movedItem);
+
+    saveDataOverrides();
+    renderCategories();
+    updateProgress();
+    updateStats();
   }
 
   // ── Helpers ────────────────────────────────────────────
