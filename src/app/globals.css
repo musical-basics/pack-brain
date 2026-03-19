@@ -503,6 +503,11 @@ body::before {
   text-overflow: ellipsis;
 }
 
+.bag-tag-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .bag-tag {
   flex-shrink: 0;
   font-size: 0.6rem;
@@ -510,12 +515,68 @@ body::before {
   padding: 2px 8px;
   border-radius: 8px;
   white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bag-tag:hover {
+  filter: brightness(1.3);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .bag-tag.checked-bag { background: rgba(108, 99, 255, 0.12); color: #A78BFA; }
 .bag-tag.backpack { background: rgba(0, 201, 167, 0.12); color: #00E5A0; }
 .bag-tag.worn { background: rgba(253, 121, 168, 0.12); color: #FD79A8; }
 .bag-tag.home { background: rgba(253, 203, 110, 0.12); color: #FDCB6E; }
+
+/* Bag picker popover */
+.bag-picker-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  min-width: 120px;
+  animation: popIn 0.12s ease-out;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bag-picker-option {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.bag-picker-option:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.bag-picker-option.active {
+  background: var(--accent);
+  color: #fff;
+}
 
 /* Edit / Delete buttons */
 .edit-btn, .delete-btn {

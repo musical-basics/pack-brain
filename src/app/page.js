@@ -30,6 +30,7 @@ export default function PackingListPage() {
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [activeFilter, setActiveFilter] = useState("all");
   const [editingId, setEditingId] = useState(null);
+  const [bagPickerId, setBagPickerId] = useState(null);
   const [mounted, setMounted] = useState(false);
 
   // Track newly created items (not yet in DB)
@@ -55,6 +56,14 @@ export default function PackingListPage() {
       .catch((err) => console.error("Failed to load packing data:", err))
       .finally(() => setMounted(true));
   }, []);
+
+  // Close bag picker on outside click
+  useEffect(() => {
+    if (!bagPickerId) return;
+    const close = () => setBagPickerId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [bagPickerId]);
 
   // ── Persist ────────────────────────────────────────────
   const persistCategories = useCallback((cats) => {
@@ -159,6 +168,22 @@ export default function PackingListPage() {
     if (confirm("Reset all checkboxes?")) {
       persistChecked(new Set());
     }
+  };
+
+  const handleBagChange = (catId, itemId, newBag) => {
+    const next = categories.map((c) =>
+      c.id === catId
+        ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, bag: newBag } : i)) }
+        : c
+    );
+    persistCategories(next);
+    setBagPickerId(null);
+    // Persist to DB
+    fetch("/api/packing/items", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update", itemId, fields: { bag: newBag } }),
+    }).catch(console.error);
   };
 
   const handleCopy = () => {
@@ -412,7 +437,32 @@ export default function PackingListPage() {
                       </label>
                       <div className="item-meta">
                         {item.note && <span className="item-note">{item.note}</span>}
-                        <span className={`bag-tag ${item.bag}`}>{getBagLabel(item.bag)}</span>
+                        <div className="bag-tag-wrapper">
+                          <button
+                            className={`bag-tag ${item.bag}`}
+                            onClick={(e) => { e.stopPropagation(); setBagPickerId(bagPickerId === item.id ? null : item.id); }}
+                          >
+                            {getBagLabel(item.bag)}
+                          </button>
+                          {bagPickerId === item.id && (
+                            <div className="bag-picker-popover">
+                              {[
+                                { key: "checked-bag", label: "🧳 Checked" },
+                                { key: "backpack", label: "🎒 Backpack" },
+                                { key: "worn", label: "👟 On you" },
+                                { key: "home", label: "🏠 Home" },
+                              ].map(({ key, label }) => (
+                                <button
+                                  key={key}
+                                  className={`bag-picker-option ${item.bag === key ? "active" : ""}`}
+                                  onClick={(e) => { e.stopPropagation(); handleBagChange(cat.id, item.id, key); }}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div className="mobile-reorder-btns">
                           <button
                             className="move-btn"

@@ -1,0 +1,27 @@
+{
+  "output": {
+    "filePath": "packbrain-repomix.xml",
+    "style": "xml"
+  },
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "_backup_files/**",
+      "node_modules/**",
+      ".next/**",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "public/**",
+      "app.js",
+      "data.js",
+      "index.html",
+      "styles.css",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "docs/**",
+      "*.xml",
+      ".env.local"
+    ]
+  }
+}
