@@ -181,6 +181,52 @@ export async function getCategories(listId) {
   }));
 }
 
+// ── Categories ────────────────────────────────────────────
+export async function createCategory({ listId, title, icon }) {
+  const { data: maxOrder } = await supabase
+    .from("categories")
+    .select("sort_order")
+    .eq("list_id", listId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
+  const sortOrder = (maxOrder?.sort_order ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      list_id: listId,
+      title: title || "New section",
+      icon: icon || "📦",
+      sort_order: sortOrder,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updateCategory(categoryId, fields) {
+  const allowed = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (["title", "icon", "sort_order"].includes(k)) allowed[k] = v;
+  }
+  if (Object.keys(allowed).length === 0) return null;
+  const { data, error } = await supabase
+    .from("categories")
+    .update(allowed)
+    .eq("id", categoryId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteCategory(categoryId) {
+  const { error } = await supabase.from("categories").delete().eq("id", categoryId);
+  if (error) throw new Error(error.message);
+}
+
 // ── Items ─────────────────────────────────────────────────
 export async function createItem({ id, categoryId, name, qty, bag, note }) {
   const { data: maxOrder } = await supabase

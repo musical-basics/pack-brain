@@ -34,6 +34,7 @@ export default function PackingListPage() {
   const [bagPickerId, setBagPickerId] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [currentListId, setCurrentListId] = useState(null);
+  const [addingSection, setAddingSection] = useState(false);
 
   // Track newly created items (not yet in DB)
   const newItemIds = useRef(new Set());
@@ -196,6 +197,24 @@ export default function PackingListPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "update", itemId, fields: { bag: newBag } }),
     }).catch(console.error);
+  };
+
+  const handleAddSection = async ({ title, icon }) => {
+    setAddingSection(false);
+    if (!title?.trim()) return;
+    try {
+      const res = await fetch("/api/packing/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listId: currentListId, title: title.trim(), icon: icon || "📦" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setCategories([...categories, { ...data.category, items: [] }]);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to add section: " + e.message);
+    }
   };
 
   const handleCopy = () => {
@@ -503,6 +522,18 @@ export default function PackingListPage() {
             </section>
           );
         })}
+
+        {/* Add new section */}
+        {addingSection ? (
+          <AddSectionRow
+            onSave={handleAddSection}
+            onCancel={() => setAddingSection(false)}
+          />
+        ) : (
+          <button className="add-section-btn" onClick={() => setAddingSection(true)}>
+            <span>+</span> Add section
+          </button>
+        )}
       </main>
 
       {/* Footer */}
@@ -576,5 +607,61 @@ function EditRow({ item, catId, onSave, onCancel }) {
         </div>
       </div>
     </li>
+  );
+}
+
+// ── Add Section Row ──────────────────────────────────────
+function AddSectionRow({ onSave, onCancel }) {
+  const [title, setTitle] = useState("");
+  const [icon, setIcon] = useState("📦");
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
+
+  const submit = () => {
+    if (!title.trim()) return;
+    onSave({ title, icon });
+  };
+
+  const onKey = (e) => {
+    if (e.key === "Enter") submit();
+    if (e.key === "Escape") onCancel();
+  };
+
+  return (
+    <section className="category add-section-edit">
+      <div className="edit-form">
+        <div className="edit-row">
+          <div className="edit-field edit-field-sm">
+            <label className="edit-field-label">Icon</label>
+            <input
+              className="edit-input"
+              value={icon}
+              onChange={(e) => setIcon(e.target.value)}
+              onKeyDown={onKey}
+              maxLength={4}
+              placeholder="📦"
+            />
+          </div>
+          <div className="edit-field">
+            <label className="edit-field-label">Section name</label>
+            <input
+              ref={titleRef}
+              className="edit-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={onKey}
+              placeholder="e.g. Toiletries"
+            />
+          </div>
+        </div>
+        <div className="edit-actions">
+          <button className="edit-save" onClick={submit}>✓ Add section</button>
+          <button className="edit-cancel" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </section>
   );
 }
