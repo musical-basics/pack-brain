@@ -863,6 +863,25 @@ body::before {
   background: rgba(108, 99, 255, 0.05);
 }
 
+.category-delete-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  opacity: 0.4;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+.category-delete-btn:hover {
+  opacity: 1;
+  color: #ff6b6b;
+  background: rgba(255,107,107,0.1);
+}
+
 .add-section-btn {
   display: flex;
   align-items: center;

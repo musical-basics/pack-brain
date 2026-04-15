@@ -205,6 +205,18 @@ export default function PackingListPage() {
     }).catch(console.error);
   };
 
+  const handleDeleteSection = async (catId, title) => {
+    if (!confirm(`Delete section "${title}" and all its items?`)) return;
+    setCategories(categories.filter((c) => c.id !== catId));
+    try {
+      const res = await fetch(`/api/packing/categories?categoryId=${catId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete section: " + e.message);
+    }
+  };
+
   const handleAddSection = async ({ title, icon }) => {
     setAddingSection(false);
     if (!title?.trim()) return;
@@ -414,9 +426,12 @@ export default function PackingListPage() {
       <main>
         {categories.map((cat) => {
           const filtered = filterItems(cat.items);
-          if (filtered.length === 0) return null;
+          // Hide a section only when a filter is active and it has nothing to show.
+          // Empty sections (no items at all) stay visible so the user can add items.
+          if (filtered.length === 0 && cat.items.length > 0) return null;
           const catChecked = filtered.filter((i) => checkedItems.has(i.id)).length;
-          const allDone = catChecked === filtered.length;
+          const allDone = filtered.length > 0 && catChecked === filtered.length;
+          const pctFill = filtered.length > 0 ? (catChecked / filtered.length) * 100 : 0;
 
           return (
             <section key={cat.id} className="category">
@@ -427,11 +442,19 @@ export default function PackingListPage() {
                   <span className={`category-count ${allDone ? "done" : ""}`}>
                     {catChecked}/{filtered.length}
                   </span>
+                  <button
+                    className="category-delete-btn"
+                    onClick={() => handleDeleteSection(cat.id, cat.title)}
+                    title="Delete section"
+                    aria-label="Delete section"
+                  >
+                    <TrashIcon />
+                  </button>
                 </div>
                 <div className="category-progress-bar">
                   <div
                     className="category-progress-fill"
-                    style={{ width: `${(catChecked / filtered.length) * 100}%`, background: cat.color }}
+                    style={{ width: `${pctFill}%`, background: cat.color }}
                   />
                 </div>
               </div>
