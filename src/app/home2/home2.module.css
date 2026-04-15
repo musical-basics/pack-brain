@@ -152,12 +152,41 @@
   gap: 28px;
 }
 
+/* ── Bag section ─────────────────────────────────────── */
+.bagSection { display: flex; flex-direction: column; gap: 10px; }
+.bagSectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.bagSectionLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--h2-text-muted);
+}
+.manageBagsBtn {
+  background: transparent;
+  border: 1px solid var(--h2-border);
+  color: var(--h2-text-secondary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.manageBagsBtn:hover { border-color: var(--h2-accent); color: var(--h2-text-primary); }
+
 /* ── Bento bag tiles ─────────────────────────────────── */
 .bagGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+.bagGrid > .bagTile:nth-child(odd):last-child { grid-column: 1 / -1; }
 .bagTile {
   position: relative;
   background: var(--h2-bg-surface);
@@ -207,16 +236,9 @@
 .bagTileDone .bagTileLabel { color: var(--h2-text-faint); text-decoration: line-through; }
 .bagTileDone .bagTileCount {
   background: transparent;
-  color: var(--h2-bag-checked);
+  color: var(--bag-accent, var(--h2-accent));
 }
-.bagTile.checked .bagTileGlow { background: var(--h2-bag-checked); }
-.bagTile.backpack .bagTileGlow { background: var(--h2-bag-backpack); }
-.bagTile.worn .bagTileGlow { background: var(--h2-bag-worn); }
-.bagTile.home .bagTileGlow { background: var(--h2-bag-home); }
-.bagTile.checked .bagTileIcon { color: var(--h2-bag-checked); }
-.bagTile.backpack .bagTileIcon { color: var(--h2-bag-backpack); }
-.bagTile.worn .bagTileIcon { color: var(--h2-bag-worn); }
-.bagTile.home .bagTileIcon { color: var(--h2-bag-home); }
+.bagTileDone .bagTileGlow { opacity: 0.15; }
 
 /* ── Filter pills (horizontal scroll) ────────────────── */
 .filterRow {
@@ -461,10 +483,7 @@
   background: transparent;
   position: relative;
 }
-.bagTag.checked { color: var(--h2-bag-checked); background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.25); }
-.bagTag.backpack { color: var(--h2-bag-backpack); background: rgba(14, 165, 233, 0.1); border-color: rgba(14, 165, 233, 0.25); }
-.bagTag.worn { color: var(--h2-bag-worn); background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.25); }
-.bagTag.home { color: var(--h2-bag-home); background: rgba(217, 70, 239, 0.1); border-color: rgba(217, 70, 239, 0.25); }
+/* Bag tag colors are applied inline from the list's bag[].color (dynamic). */
 
 .bagPicker {
   position: absolute;
@@ -694,4 +713,125 @@
   margin-top: 4px;
   font-weight: 600;
   color: var(--h2-accent);
+}
+
+/* ── Manage bags modal ──────────────────────────────── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+@media (min-width: 600px) {
+  .modalBackdrop { align-items: center; }
+}
+.modal {
+  background: var(--h2-bg-elevated);
+  border: 1px solid var(--h2-border-hover);
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modalTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--h2-text-primary);
+}
+.bagRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+  flex: 1;
+}
+.bagRow {
+  background: var(--h2-bg-surface);
+  border: 1px solid var(--h2-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bagRowTop { display: flex; gap: 8px; align-items: center; }
+.bagRowIcon {
+  width: 44px;
+  flex-shrink: 0;
+  text-align: center;
+  background: var(--h2-bg-base);
+  border: 1px solid var(--h2-border);
+  border-radius: 8px;
+  padding: 8px;
+  color: var(--h2-text-primary);
+  font-family: inherit;
+  font-size: 1.1rem;
+}
+.bagRowLabel {
+  flex: 1;
+  background: var(--h2-bg-base);
+  border: 1px solid var(--h2-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--h2-text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.bagRowColor {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--h2-border);
+  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.bagRowBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.bagRowKey {
+  font-size: 0.66rem;
+  color: var(--h2-text-muted);
+  font-family: ui-monospace, monospace;
+}
+.addBagBtn {
+  background: transparent;
+  border: 1.5px dashed var(--h2-border);
+  color: var(--h2-text-muted);
+  padding: 10px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.addBagBtn:hover { border-color: var(--h2-accent); color: var(--h2-text-primary); }
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--h2-border);
 }

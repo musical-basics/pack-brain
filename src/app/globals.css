@@ -690,6 +690,7 @@ body::before {
 }
 
 .bag-tag.checked-bag { background: rgba(108, 99, 255, 0.12); color: #A78BFA; }
+.bag-tag.carry-on { background: rgba(16, 185, 129, 0.14); color: #34D399; }
 .bag-tag.backpack { background: rgba(0, 201, 167, 0.12); color: #00E5A0; }
 .bag-tag.worn { background: rgba(253, 121, 168, 0.12); color: #FD79A8; }
 .bag-tag.home { background: rgba(253, 203, 110, 0.12); color: #FDCB6E; }

@@ -99,9 +99,9 @@ export default function PackingListPage() {
   const doneItems = allItems.filter((i) => checkedItems.has(i.id)).length;
   const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
 
-  const bagCounts = { "checked-bag": 0, backpack: 0, worn: 0, home: 0 };
+  const bagCounts = { "checked-bag": 0, "carry-on": 0, backpack: 0, worn: 0, home: 0 };
   allItems.forEach((i) => {
-    if (!checkedItems.has(i.id)) bagCounts[i.bag]++;
+    if (!checkedItems.has(i.id) && bagCounts[i.bag] != null) bagCounts[i.bag]++;
   });
 
   // ── Filter ─────────────────────────────────────────────
@@ -387,6 +387,7 @@ export default function PackingListPage() {
       <div className="stats-bar">
         {[
           { key: "checked-bag", icon: "🧳", label: "Checked Bag" },
+          { key: "carry-on", icon: "🛄", label: "Carry-on" },
           { key: "backpack", icon: "🎒", label: "Backpack" },
           { key: "worn", icon: "👟", label: "Worn" },
           { key: "home", icon: "🏠", label: "Home Prep" },
@@ -408,6 +409,7 @@ export default function PackingListPage() {
         {[
           { key: "all", label: "All" },
           { key: "checked-bag", label: "🧳 Checked" },
+          { key: "carry-on", label: "🛄 Carry-on" },
           { key: "backpack", label: "🎒 Backpack" },
           { key: "worn", label: "👟 Worn" },
           { key: "home", label: "🏠 Home" },
@@ -515,6 +517,7 @@ export default function PackingListPage() {
                             <div className="bag-picker-popover">
                               {[
                                 { key: "checked-bag", label: "🧳 Checked" },
+                                { key: "carry-on", label: "🛄 Carry-on" },
                                 { key: "backpack", label: "🎒 Backpack" },
                                 { key: "worn", label: "👟 On you" },
                                 { key: "home", label: "🏠 Home" },
@@ -631,6 +634,7 @@ function EditRow({ item, catId, onSave, onCancel }) {
             <label className="edit-field-label">Bag</label>
             <select className="edit-select" value={bag} onChange={(e) => setBag(e.target.value)}>
               <option value="checked-bag">🧳 Checked</option>
+              <option value="carry-on">🛄 Carry-on</option>
               <option value="backpack">🎒 Backpack</option>
               <option value="worn">👟 On you</option>
               <option value="home">🏠 Home</option>

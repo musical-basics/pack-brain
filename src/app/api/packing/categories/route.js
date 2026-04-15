@@ -2,6 +2,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  reorderCategories,
   getListOrDefault,
 } from "@/lib/dbQueries";
 
@@ -24,10 +25,17 @@ export async function POST(request) {
   }
 }
 
-// PATCH /api/packing/categories — rename / change icon
+// PATCH /api/packing/categories — rename / change icon, or reorder
 export async function PATCH(request) {
   try {
-    const { categoryId, fields } = await request.json();
+    const body = await request.json();
+
+    if (body.action === "reorder" && Array.isArray(body.categoryIds)) {
+      await reorderCategories(body.categoryIds);
+      return Response.json({ ok: true });
+    }
+
+    const { categoryId, fields } = body;
     if (!categoryId) return Response.json({ error: "categoryId required" }, { status: 400 });
     const category = await updateCategory(categoryId, fields || {});
     return Response.json({ category });

@@ -12,9 +12,13 @@ CREATE TABLE IF NOT EXISTS packbrain.packing_lists (
   title TEXT NOT NULL DEFAULT 'My Trip',
   destination TEXT,
   duration_days INTEGER,
+  bags JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Migration for existing databases: add the bags column if it doesn't exist
+ALTER TABLE packbrain.packing_lists ADD COLUMN IF NOT EXISTS bags JSONB DEFAULT '[]'::jsonb;
 
 CREATE TABLE IF NOT EXISTS packbrain.categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -3,36 +3,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getBagLabel } from "@/lib/packingData";
+import { DEFAULT_BAGS } from "@/lib/packingData";
 import { getUrlListId, setStoredListId } from "@/components/ListSelector";
 import ListPicker from "@/components/ListPicker";
 import s from "./home2.module.css";
 
-const BAG_OPTIONS = [
-  { key: "checked-bag", label: "Checked", short: "🧳" },
-  { key: "backpack", label: "Backpack", short: "🎒" },
-  { key: "worn", label: "On you", short: "👟" },
-  { key: "home", label: "Home", short: "🏠" },
-];
-
-const FILTER_OPTIONS = [
-  { key: "all", label: "All" },
-  { key: "unchecked", label: "Remaining" },
-  { key: "checked-bag", label: "Checked", dot: "checked" },
-  { key: "backpack", label: "Backpack", dot: "backpack" },
-  { key: "worn", label: "Worn", dot: "worn" },
-  { key: "home", label: "Home", dot: "home" },
-];
-
-const BAG_TILES = [
-  { key: "checked-bag", cls: "checked", icon: "🧳", label: "Checked Bag" },
-  { key: "backpack", cls: "backpack", icon: "🎒", label: "Backpack" },
-  { key: "worn", cls: "worn", icon: "👟", label: "Worn" },
-  { key: "home", cls: "home", icon: "🏠", label: "Home Prep" },
-];
-
-// "checked-bag" is the bag-key used in the DB; the CSS class is just "checked".
-const bagToCls = (bag) => (bag === "checked-bag" ? "checked" : bag);
+// Convert #rrggbb into an rgba() string with the given alpha (0–1).
+const alpha = (hex, a) => {
+  if (!hex || !hex.startsWith("#") || hex.length !== 7) return `rgba(255,255,255,${a})`;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${a})`;
+};
 
 export default function Home2Page() {
   const pathname = usePathname();
@@ -46,6 +29,8 @@ export default function Home2Page() {
   const [addingSection, setAddingSection] = useState(false);
   const [showListMenu, setShowListMenu] = useState(false);
   const [lists, setLists] = useState([]);
+  const [bags, setBags] = useState(DEFAULT_BAGS);
+  const [showBagsManager, setShowBagsManager] = useState(false);
 
   const newItemIds = useRef(new Set());
   const dragState = useRef({ itemId: null, catId: null });
@@ -75,6 +60,7 @@ export default function Home2Page() {
           );
           setCheckedItems(checked);
         }
+        if (data.list?.bags?.length) setBags(data.list.bags);
       })
       .catch((err) => console.error("Failed to load packing data:", err));
   }, [currentListId]);
@@ -114,8 +100,16 @@ export default function Home2Page() {
   const doneItems = allItems.filter((i) => checkedItems.has(i.id)).length;
   const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
 
-  const bagCounts = { "checked-bag": 0, backpack: 0, worn: 0, home: 0 };
-  allItems.forEach((i) => { if (!checkedItems.has(i.id)) bagCounts[i.bag]++; });
+  const bagCounts = Object.fromEntries(bags.map((b) => [b.key, 0]));
+  allItems.forEach((i) => {
+    if (checkedItems.has(i.id)) return;
+    if (bagCounts[i.bag] != null) bagCounts[i.bag]++;
+  });
+  const bagByKey = Object.fromEntries(bags.map((b) => [b.key, b]));
+  const bagLabelOf = (key) => {
+    const b = bagByKey[key];
+    return b ? b.label : key;
+  };
 
   const filterItems = (items) => {
     if (activeFilter === "all") return items;
@@ -257,6 +251,44 @@ export default function Home2Page() {
     } catch (e) {
       console.error(e);
       alert("Failed to add section: " + e.message);
+    }
+  };
+
+  const handleMoveSection = (catId, direction) => {
+    const idx = categories.findIndex((c) => c.id === catId);
+    if (idx < 0) return;
+    const newIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= categories.length) return;
+    const next = [...categories];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    setCategories(next);
+    fetch("/api/packing/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reorder", categoryIds: next.map((c) => c.id) }),
+    }).catch(console.error);
+  };
+
+  const handleSaveBags = async (nextBags) => {
+    setBags(nextBags);
+    setShowBagsManager(false);
+    try {
+      const res = await fetch("/api/packing/lists", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listId: currentListId, fields: { bags: nextBags } }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          (data.error || "").includes("bags")
+            ? "DB column missing. Run:\n\nALTER TABLE packbrain.packing_lists\n  ADD COLUMN IF NOT EXISTS bags JSONB DEFAULT '[]'::jsonb;\n\nin Supabase SQL editor, then try again."
+            : data.error || "Failed"
+        );
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Couldn't save bags: " + e.message);
     }
   };
 
@@ -421,44 +453,64 @@ export default function Home2Page() {
 
         {/* ── Main ───────────────────────────────────── */}
         <main className={s.main}>
-          {/* Bag tiles */}
-          <section className={s.bagGrid}>
-            {BAG_TILES.map((t) => {
-              const left = bagCounts[t.key];
-              const done = left === 0;
-              return (
-                <div key={t.key} className={`${s.bagTile} ${s[t.cls]} ${done ? s.bagTileDone : ""}`}>
-                  <div className={s.bagTileGlow} />
-                  <div className={s.bagTileTop}>
-                    <span className={s.bagTileIcon}>{t.icon}</span>
-                    <span className={s.bagTileCount}>{done ? "✓ done" : `${left} left`}</span>
+          {/* Bag tiles (dynamic) */}
+          <section className={s.bagSection}>
+            <div className={s.bagSectionHead}>
+              <span className={s.bagSectionLabel}>Bags</span>
+              <button
+                className={s.manageBagsBtn}
+                onClick={() => setShowBagsManager(true)}
+                title="Add, edit or delete bags"
+              >
+                ⚙ Manage
+              </button>
+            </div>
+            <div className={s.bagGrid}>
+              {bags.map((b) => {
+                const left = bagCounts[b.key] ?? 0;
+                const done = left === 0;
+                return (
+                  <div
+                    key={b.key}
+                    className={`${s.bagTile} ${done ? s.bagTileDone : ""}`}
+                    style={{ "--bag-accent": b.color }}
+                  >
+                    <div className={s.bagTileGlow} style={{ background: b.color }} />
+                    <div className={s.bagTileTop}>
+                      <span className={s.bagTileIcon} style={{ color: b.color }}>{b.icon}</span>
+                      <span className={s.bagTileCount}>{done ? "✓ done" : `${left} left`}</span>
+                    </div>
+                    <p className={s.bagTileLabel}>{b.label}</p>
                   </div>
-                  <p className={s.bagTileLabel}>{t.label}</p>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </section>
 
-          {/* Filters */}
+          {/* Filters (derived from bags) */}
           <section className={s.filterRow}>
             <div className={s.filterScroll}>
-              {FILTER_OPTIONS.map((f) => (
+              <button
+                className={`${s.filterPill} ${activeFilter === "all" ? s.filterPillActive : ""}`}
+                onClick={() => setActiveFilter("all")}
+              >
+                All
+                {totalItems > 0 && <span className={s.filterPillCount}>{totalItems}</span>}
+              </button>
+              <button
+                className={`${s.filterPill} ${activeFilter === "unchecked" ? s.filterPillActive : ""}`}
+                onClick={() => setActiveFilter("unchecked")}
+              >
+                Remaining
+              </button>
+              {bags.map((b) => (
                 <button
-                  key={f.key}
-                  className={`${s.filterPill} ${activeFilter === f.key ? s.filterPillActive : ""}`}
-                  onClick={() => setActiveFilter(f.key)}
+                  key={b.key}
+                  className={`${s.filterPill} ${activeFilter === b.key ? s.filterPillActive : ""}`}
+                  onClick={() => setActiveFilter(b.key)}
                 >
-                  {f.dot && <span className={`${s.filterPillDot} ${s[f.dot] ? "" : ""}`} style={{
-                    background:
-                      f.dot === "checked" ? "var(--h2-bag-checked)" :
-                      f.dot === "backpack" ? "var(--h2-bag-backpack)" :
-                      f.dot === "worn" ? "var(--h2-bag-worn)" :
-                      f.dot === "home" ? "var(--h2-bag-home)" : "transparent",
-                  }} />}
-                  {f.label}
-                  {f.key === "all" && totalItems > 0 && (
-                    <span className={s.filterPillCount}>{totalItems}</span>
-                  )}
+                  <span className={s.filterPillDot} style={{ background: b.color }} />
+                  {b.label}
                 </button>
               ))}
             </div>
@@ -466,7 +518,7 @@ export default function Home2Page() {
 
           {/* Categories */}
           <div className={s.categories}>
-            {categories.map((cat) => {
+            {categories.map((cat, catIdx) => {
               const filtered = filterItems(cat.items);
               if (filtered.length === 0 && cat.items.length > 0) return null;
               const catChecked = filtered.filter((i) => checkedItems.has(i.id)).length;
@@ -486,11 +538,27 @@ export default function Home2Page() {
                       ) : (
                         <span className={s.sectionCount}>{catChecked}/{filtered.length} packed</span>
                       )}
-                      <button
-                        className={s.sectionDeleteBtn}
-                        onClick={() => handleDeleteSection(cat.id, cat.title)}
-                        title="Delete section"
-                      >🗑</button>
+                      <div className={s.itemActions}>
+                        <button
+                          className={s.iconBtn}
+                          onClick={() => handleMoveSection(cat.id, "up")}
+                          disabled={catIdx === 0}
+                          aria-label="Move section up"
+                          title="Move section up"
+                        >▲</button>
+                        <button
+                          className={s.iconBtn}
+                          onClick={() => handleMoveSection(cat.id, "down")}
+                          disabled={catIdx === categories.length - 1}
+                          aria-label="Move section down"
+                          title="Move section down"
+                        >▼</button>
+                        <button
+                          className={s.sectionDeleteBtn}
+                          onClick={() => handleDeleteSection(cat.id, cat.title)}
+                          title="Delete section"
+                        >🗑</button>
+                      </div>
                     </div>
                     <div className={s.sectionBar}>
                       <div className={s.sectionBarFill} style={{ width: `${pctFill}%` }} />
@@ -504,6 +572,7 @@ export default function Home2Page() {
                           key={item.id}
                           item={item}
                           catId={cat.id}
+                          bags={bags}
                           onSave={handleSaveEdit}
                           onCancel={() => setEditingId(null)}
                         />
@@ -532,22 +601,31 @@ export default function Home2Page() {
                           </div>
                           <div className={s.itemMeta} onClick={(e) => e.stopPropagation()}>
                             <button
-                              className={`${s.bagTag} ${s[bagToCls(item.bag)]}`}
+                              className={s.bagTag}
+                              style={(() => {
+                                const b = bagByKey[item.bag];
+                                if (!b) return {};
+                                return {
+                                  color: b.color,
+                                  background: alpha(b.color, 0.1),
+                                  borderColor: alpha(b.color, 0.25),
+                                };
+                              })()}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setBagPickerId(bagPickerId === item.id ? null : item.id);
                               }}
                             >
-                              {getBagLabel(item.bag).replace(/^[^\s]+\s/, "")}
+                              {bagLabelOf(item.bag)}
                               {bagPickerId === item.id && (
                                 <div className={s.bagPicker}>
-                                  {BAG_OPTIONS.map((b) => (
+                                  {bags.map((b) => (
                                     <button
                                       key={b.key}
                                       className={`${s.bagPickerOption} ${item.bag === b.key ? s.bagPickerOptionActive : ""}`}
                                       onClick={(ev) => { ev.stopPropagation(); handleBagChange(cat.id, item.id, b.key); }}
                                     >
-                                      {b.short} {b.label}
+                                      <span style={{ color: b.color, marginRight: 6 }}>{b.icon}</span> {b.label}
                                     </button>
                                   ))}
                                 </div>
@@ -609,13 +687,124 @@ export default function Home2Page() {
           </div>
           <p className={s.footerTip}>💡 Drag items to reorder, tap a tag to change bag.</p>
         </footer>
+
+        {showBagsManager && (
+          <ManageBagsModal
+            bags={bags}
+            onSave={handleSaveBags}
+            onCancel={() => setShowBagsManager(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Manage bags modal ───────────────────────────────────
+function ManageBagsModal({ bags, onSave, onCancel }) {
+  const [draft, setDraft] = useState(() =>
+    bags.map((b) => ({ ...b, _id: `${b.key}-${Math.random().toString(36).slice(2, 6)}` }))
+  );
+
+  const update = (idx, patch) => {
+    const next = [...draft];
+    next[idx] = { ...next[idx], ...patch };
+    setDraft(next);
+  };
+  const remove = (idx) => setDraft(draft.filter((_, i) => i !== idx));
+  const move = (idx, dir) => {
+    const ni = dir === "up" ? idx - 1 : idx + 1;
+    if (ni < 0 || ni >= draft.length) return;
+    const next = [...draft];
+    [next[idx], next[ni]] = [next[ni], next[idx]];
+    setDraft(next);
+  };
+  const add = () => {
+    const key = `bag-${Date.now().toString(36)}`;
+    setDraft([
+      ...draft,
+      { _id: key, key, icon: "👜", label: "New bag", color: "#a78bfa" },
+    ]);
+  };
+
+  const save = () => {
+    // Strip _id before saving; ensure label/key non-empty.
+    const cleaned = draft
+      .map((b) => ({
+        key: (b.key || "").trim() || `bag-${Math.random().toString(36).slice(2, 8)}`,
+        label: (b.label || "").trim() || "Bag",
+        icon: (b.icon || "📦").trim() || "📦",
+        color: b.color || "#a78bfa",
+      }))
+      .filter((b) => b.key);
+    onSave(cleaned);
+  };
+
+  return (
+    <div className={s.modalBackdrop} onClick={onCancel}>
+      <div className={s.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={s.modalHeader}>
+          <h3 className={s.modalTitle}>Manage bags</h3>
+          <button className={s.iconBtn} onClick={onCancel} aria-label="Close">×</button>
+        </div>
+
+        <div className={s.bagRows}>
+          {draft.map((b, idx) => (
+            <div key={b._id} className={s.bagRow}>
+              <div className={s.bagRowTop}>
+                <input
+                  className={s.bagRowIcon}
+                  value={b.icon}
+                  onChange={(e) => update(idx, { icon: e.target.value })}
+                  maxLength={4}
+                  placeholder="📦"
+                />
+                <input
+                  className={s.bagRowLabel}
+                  value={b.label}
+                  onChange={(e) => update(idx, { label: e.target.value })}
+                  placeholder="Bag name"
+                />
+                <input
+                  className={s.bagRowColor}
+                  type="color"
+                  value={b.color}
+                  onChange={(e) => update(idx, { color: e.target.value })}
+                />
+              </div>
+              <div className={s.bagRowBottom}>
+                <span className={s.bagRowKey} title="Key used internally — unique id">
+                  key: {b.key}
+                </span>
+                <div className={s.itemActions}>
+                  <button className={s.iconBtn} onClick={() => move(idx, "up")} disabled={idx === 0}>▲</button>
+                  <button className={s.iconBtn} onClick={() => move(idx, "down")} disabled={idx === draft.length - 1}>▼</button>
+                  <button
+                    className={s.iconBtn}
+                    onClick={() => {
+                      if (confirm(`Delete "${b.label}"? Items using this bag will keep the tag but show it raw.`)) remove(idx);
+                    }}
+                    title="Delete bag"
+                  >×</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button className={s.addBagBtn} onClick={add}>+ Add a bag</button>
+
+        <div className={s.modalActions}>
+          <button className={s.editCancel} onClick={onCancel}>Cancel</button>
+          <button className={s.editSave} onClick={save}>Save bags</button>
+        </div>
       </div>
     </div>
   );
 }
 
 // ── Inline edit (item) ──────────────────────────────────
-function EditRow({ item, catId, onSave, onCancel }) {
+function EditRow({ item, catId, bags, onSave, onCancel }) {
   const [name, setName] = useState(item.name);
   const [qty, setQty] = useState(item.qty || "");
   const [note, setNote] = useState(item.note || "");
@@ -654,10 +843,9 @@ function EditRow({ item, catId, onSave, onCancel }) {
         <div className={`${s.editField} ${s.editFieldSm}`}>
           <label className={s.editLabel}>Bag</label>
           <select className={s.editSelect} value={bag} onChange={(e) => setBag(e.target.value)}>
-            <option value="checked-bag">🧳 Checked</option>
-            <option value="backpack">🎒 Backpack</option>
-            <option value="worn">👟 On you</option>
-            <option value="home">🏠 Home</option>
+            {bags.map((b) => (
+              <option key={b.key} value={b.key}>{b.icon} {b.label}</option>
+            ))}
           </select>
         </div>
       </div>

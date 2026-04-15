@@ -61,7 +61,7 @@ export async function createList({ title, destination, duration_days }) {
 export async function updateList(listId, fields) {
   const allowed = {};
   for (const [k, v] of Object.entries(fields)) {
-    if (["title", "destination", "duration_days"].includes(k)) allowed[k] = v;
+    if (["title", "destination", "duration_days", "bags"].includes(k)) allowed[k] = v;
   }
   if (Object.keys(allowed).length === 0) return null;
   allowed.updated_at = new Date().toISOString();
@@ -225,6 +225,16 @@ export async function updateCategory(categoryId, fields) {
 export async function deleteCategory(categoryId) {
   const { error } = await supabase.from("categories").delete().eq("id", categoryId);
   if (error) throw new Error(error.message);
+}
+
+export async function reorderCategories(categoryIds) {
+  for (let i = 0; i < categoryIds.length; i++) {
+    const { error } = await supabase
+      .from("categories")
+      .update({ sort_order: i })
+      .eq("id", categoryIds[i]);
+    if (error) throw new Error(error.message);
+  }
 }
 
 // ── Items ─────────────────────────────────────────────────

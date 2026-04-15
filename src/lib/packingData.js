@@ -185,12 +185,18 @@ export function clearPhases() {
   localStorage.removeItem(PHASES_KEY);
 }
 
+// Default bag set used when a list has no custom bags configured.
+// Stored in packing_lists.bags (JSONB) once the user customizes them.
+export const DEFAULT_BAGS = [
+  { key: "checked-bag", label: "Checked",  icon: "🧳", color: "#f43f5e" },
+  { key: "carry-on",    label: "Carry-on", icon: "🛄", color: "#10b981" },
+  { key: "backpack",    label: "Backpack", icon: "🎒", color: "#0ea5e9" },
+  { key: "worn",        label: "On you",   icon: "👟", color: "#f59e0b" },
+  { key: "home",        label: "Home",     icon: "🏠", color: "#d946ef" },
+];
+
 export function getBagLabel(bag) {
-  const labels = {
-    "checked-bag": "🧳 Checked",
-    backpack: "🎒 Backpack",
-    worn: "👟 On you",
-    home: "🏠 Home",
-  };
-  return labels[bag] || bag;
+  const match = DEFAULT_BAGS.find((b) => b.key === bag);
+  if (match) return `${match.icon} ${match.label}`;
+  return bag;
 }

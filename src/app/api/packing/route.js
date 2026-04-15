@@ -1,5 +1,5 @@
 import { getListOrDefault, getCategories, getPhases, seedFromStatic } from "@/lib/dbQueries";
-import { DEFAULT_CATEGORIES } from "@/lib/packingData";
+import { DEFAULT_CATEGORIES, DEFAULT_BAGS } from "@/lib/packingData";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +19,11 @@ export async function GET(request) {
 
     const phases = await getPhases(list.id);
 
+    // bags column may not exist yet (requires a small migration); fall back to defaults.
+    const bags = Array.isArray(list.bags) && list.bags.length > 0 ? list.bags : DEFAULT_BAGS;
+
     return Response.json({
-      list,
+      list: { ...list, bags },
       categories: categories.map((c) => ({
         id: c.id,
         title: c.title,
