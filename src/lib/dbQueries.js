@@ -21,6 +21,132 @@ export async function getOrCreateDefaultList() {
   return data;
 }
 
+// ── Resolve a list by id, falling back to the default list ─
+export async function getListOrDefault(listId) {
+  if (listId) {
+    const { data, error } = await supabase
+      .from("packing_lists")
+      .select("*")
+      .eq("id", listId)
+      .single();
+    if (!error && data) return data;
+  }
+  return getOrCreateDefaultList();
+}
+
+// ── Lists CRUD ────────────────────────────────────────────
+export async function getAllLists() {
+  const { data, error } = await supabase
+    .from("packing_lists")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function createList({ title, destination, duration_days }) {
+  const { data, error } = await supabase
+    .from("packing_lists")
+    .insert({
+      title: title || "New Trip",
+      destination: destination || null,
+      duration_days: duration_days ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updateList(listId, fields) {
+  const allowed = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (["title", "destination", "duration_days"].includes(k)) allowed[k] = v;
+  }
+  if (Object.keys(allowed).length === 0) return null;
+  allowed.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("packing_lists")
+    .update(allowed)
+    .eq("id", listId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteList(listId) {
+  const { error } = await supabase.from("packing_lists").delete().eq("id", listId);
+  if (error) throw new Error(error.message);
+}
+
+// ── Duplicate a list (copy categories + items + phases) ───
+// Items get fresh IDs (since items.id is TEXT PK) and `checked` is reset.
+// Phase item_ids arrays are remapped from old → new IDs.
+export async function duplicateList(fromListId, { title, destination, duration_days } = {}) {
+  const source = await getListOrDefault(fromListId);
+
+  const newList = await createList({
+    title: title || `${source.title} (copy)`,
+    destination: destination ?? source.destination,
+    duration_days: duration_days ?? source.duration_days,
+  });
+
+  const sourceCats = await getCategories(source.id);
+  const idMap = {}; // old item id → new item id
+
+  for (let ci = 0; ci < sourceCats.length; ci++) {
+    const cat = sourceCats[ci];
+    const { data: catRow, error: catErr } = await supabase
+      .from("categories")
+      .insert({
+        list_id: newList.id,
+        title: cat.title,
+        icon: cat.icon || "📦",
+        sort_order: ci,
+      })
+      .select("id")
+      .single();
+    if (catErr) throw new Error(catErr.message);
+
+    if (cat.items && cat.items.length > 0) {
+      const itemRows = cat.items.map((item, ii) => {
+        const newId = `dup-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}-${ii}`;
+        idMap[item.id] = newId;
+        return {
+          id: newId,
+          category_id: catRow.id,
+          name: item.name,
+          qty: item.qty,
+          bag: item.bag,
+          note: item.note,
+          checked: false,
+          sort_order: ii,
+        };
+      });
+      const { error: itemErr } = await supabase.from("items").insert(itemRows);
+      if (itemErr) throw new Error(itemErr.message);
+    }
+  }
+
+  // Copy phases with remapped item_ids
+  const sourcePhases = await getPhases(source.id);
+  if (sourcePhases.length > 0) {
+    const phaseRows = sourcePhases.map((p, i) => ({
+      list_id: newList.id,
+      title: p.title,
+      description: p.description || "",
+      item_ids: (p.item_ids || []).map((oldId) => idMap[oldId]).filter(Boolean),
+      sort_order: i,
+    }));
+    const { error: phErr } = await supabase.from("phases").insert(phaseRows);
+    if (phErr) throw new Error(phErr.message);
+  }
+
+  return newList;
+}
+
 // ── Categories (with items) ───────────────────────────────
 export async function getCategories(listId) {
   const { data: cats, error } = await supabase

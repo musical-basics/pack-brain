@@ -153,6 +153,111 @@ body::before {
   font-weight: 600;
 }
 
+/* ── List selector ───────────────────────────────────── */
+.list-selector { position: relative; display: inline-block; }
+.list-selector-btn {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.list-selector-btn:hover { background: #1e1e2a; border-color: #6C63FF; }
+.list-selector-caret { font-size: 0.7rem; opacity: 0.6; margin-left: 2px; }
+
+.list-selector-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 240px;
+  max-width: 320px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  padding: 4px;
+  z-index: 50;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.list-selector-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.list-selector-option:hover { background: rgba(108,99,255,0.12); }
+.list-selector-option.active { background: rgba(108,99,255,0.2); }
+.list-selector-title { font-weight: 600; font-size: 0.85rem; }
+.list-selector-sub { font-size: 0.72rem; opacity: 0.65; margin-top: 2px; }
+.list-selector-new {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  font-weight: 600;
+  color: #6C63FF;
+}
+
+/* ── New list dialog ─────────────────────────────────── */
+.list-dialog-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.list-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+  display: flex; flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.list-dialog-title { margin: 0; font-size: 1.05rem; }
+.list-dialog-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.list-dialog-field > span { font-size: 0.72rem; opacity: 0.7; font-weight: 600; }
+.list-dialog-field input,
+.list-dialog-field select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.list-dialog-row { display: flex; gap: 10px; }
+.list-dialog-field-sm { max-width: 90px; }
+.list-dialog-mode { display: flex; gap: 8px; }
+.list-dialog-mode-opt {
+  flex: 1;
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+.list-dialog-mode-opt.active { border-color: #6C63FF; background: rgba(108,99,255,0.1); }
+.list-dialog-mode-opt input { accent-color: #6C63FF; }
+.list-dialog-err {
+  background: rgba(255,80,80,0.12);
+  border: 1px solid rgba(255,80,80,0.4);
+  color: #ff8585;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+.list-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
 /* ── Progress Ring ────────────────────────────────────── */
 
 .progress-area {

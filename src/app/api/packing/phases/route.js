@@ -1,12 +1,12 @@
-import { getOrCreateDefaultList, savePhases, clearPhases } from "@/lib/dbQueries";
+import { getListOrDefault, savePhases, clearPhases } from "@/lib/dbQueries";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/packing/phases — save phases after AI generation or reorder
 export async function POST(request) {
   try {
-    const { phases } = await request.json();
-    const list = await getOrCreateDefaultList();
+    const { phases, listId } = await request.json();
+    const list = await getListOrDefault(listId);
     await savePhases(list.id, phases);
     return Response.json({ ok: true });
   } catch (err) {
@@ -16,9 +16,11 @@ export async function POST(request) {
 }
 
 // DELETE /api/packing/phases — clear all phases
-export async function DELETE() {
+export async function DELETE(request) {
   try {
-    const list = await getOrCreateDefaultList();
+    const url = new URL(request.url);
+    const listId = url.searchParams.get("listId");
+    const list = await getListOrDefault(listId);
     await clearPhases(list.id);
     return Response.json({ ok: true });
   } catch (err) {

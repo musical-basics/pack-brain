@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   getBagLabel,
 } from "@/lib/packingData";
+import ListSelector, { getStoredListId } from "@/components/ListSelector";
 
 // ── Drag handle SVG ──────────────────────────────────────
 const GripIcon = () => (
@@ -32,6 +33,7 @@ export default function PackingListPage() {
   const [editingId, setEditingId] = useState(null);
   const [bagPickerId, setBagPickerId] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [currentListId, setCurrentListId] = useState(null);
 
   // Track newly created items (not yet in DB)
   const newItemIds = useRef(new Set());
@@ -39,13 +41,23 @@ export default function PackingListPage() {
   // Drag state refs (no re-render needed)
   const dragState = useRef({ itemId: null, catId: null });
 
+  // Resolve initial list id from URL/localStorage on mount
   useEffect(() => {
-    fetch("/api/packing", { cache: "no-store" })
+    setCurrentListId(getStoredListId());
+  }, []);
+
+  // Load list contents whenever currentListId changes (after mount)
+  useEffect(() => {
+    if (!mounted && currentListId === null) {
+      // First render: still wait for the id-resolution effect to run
+    }
+    const url = currentListId ? `/api/packing?listId=${currentListId}` : "/api/packing";
+    fetch(url, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
+        if (data.list && !currentListId) setCurrentListId(data.list.id);
         if (data.categories) {
           setCategories(data.categories);
-          // Build checked set from item.checked fields
           const checked = new Set();
           data.categories.forEach((c) =>
             c.items.forEach((i) => { if (i.checked) checked.add(i.id); })
@@ -55,7 +67,7 @@ export default function PackingListPage() {
       })
       .catch((err) => console.error("Failed to load packing data:", err))
       .finally(() => setMounted(true));
-  }, []);
+  }, [currentListId]);
 
   // Close bag picker on outside click
   useEffect(() => {
@@ -302,7 +314,7 @@ export default function PackingListPage() {
             </div>
           </div>
           <div className="header-right">
-            <div className="trip-badge">✈️ Parents&apos; Home · 6 days</div>
+            <ListSelector currentListId={currentListId} onChange={setCurrentListId} />
             <div className="progress-area">
               <div className="progress-ring-container">
                 <svg className="progress-ring" viewBox="0 0 60 60">

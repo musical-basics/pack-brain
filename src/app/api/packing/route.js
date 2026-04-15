@@ -1,12 +1,14 @@
-import { getOrCreateDefaultList, getCategories, getPhases, seedFromStatic } from "@/lib/dbQueries";
+import { getListOrDefault, getCategories, getPhases, seedFromStatic } from "@/lib/dbQueries";
 import { DEFAULT_CATEGORIES } from "@/lib/packingData";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/packing — load everything for the current list
-export async function GET() {
+// GET /api/packing?listId=<uuid> — load everything for the chosen list (or default)
+export async function GET(request) {
   try {
-    const list = await getOrCreateDefaultList();
+    const url = new URL(request.url);
+    const listId = url.searchParams.get("listId");
+    const list = await getListOrDefault(listId);
     let categories = await getCategories(list.id);
 
     // If no categories exist yet, seed from the static defaults

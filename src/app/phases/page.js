@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   getBagLabel,
 } from "@/lib/packingData";
+import ListSelector, { getStoredListId } from "@/components/ListSelector";
 
 
 export default function PhasesPage() {
@@ -21,20 +22,23 @@ export default function PhasesPage() {
   const [expandedPhases, setExpandedPhases] = useState(new Set());
   const [mounted, setMounted] = useState(false);
   const [usage, setUsage] = useState(null);
+  const [currentListId, setCurrentListId] = useState(null);
 
   // Drag state for phase reordering
   const phaseDrag = useRef({ fromIdx: null });
 
+  // Resolve initial list id
   useEffect(() => {
-    // Load all data from DB
-    fetch("/api/packing", { cache: "no-store" })
+    setCurrentListId(getStoredListId());
+  }, []);
+
+  // Reload list contents when currentListId changes
+  useEffect(() => {
+    const url = currentListId ? `/api/packing?listId=${currentListId}` : "/api/packing";
+    fetch(url, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        console.log("[PackBrain] /api/packing response:", { 
-          categoriesCount: data.categories?.length,
-          phasesCount: data.phases?.length,
-          phases: data.phases,
-        });
+        if (data.list && !currentListId) setCurrentListId(data.list.id);
         if (data.categories) {
           setCategories(data.categories);
           const checked = new Set();
@@ -43,16 +47,21 @@ export default function PhasesPage() {
           );
           setCheckedItems(checked);
         }
+        // Reset phases for the newly loaded list
         if (data.phases && data.phases.length > 0) {
-          console.log("[PackBrain] Setting phases:", data.phases.length);
           setPhases(data.phases);
           setExpandedPhases(new Set([0]));
+        } else {
+          setPhases(null);
+          setExpandedPhases(new Set());
         }
       })
       .catch((err) => console.error("Failed to load packing data:", err))
       .finally(() => setMounted(true));
+  }, [currentListId]);
 
-    // Fetch available models from providers
+  useEffect(() => {
+    // Fetch available models from providers (once)
     fetch("/api/list-models")
       .then((r) => r.json())
       .then((data) => {
@@ -131,7 +140,7 @@ export default function PhasesPage() {
       fetch("/api/packing/phases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phases: data.phases }),
+        body: JSON.stringify({ phases: data.phases, listId: currentListId }),
       }).catch(console.error);
     } catch (err) {
       setError(err.message);
@@ -146,7 +155,8 @@ export default function PhasesPage() {
       setExpandedPhases(new Set());
       setUsage(null);
       // Clear from DB
-      fetch("/api/packing/phases", { method: "DELETE" }).catch(console.error);
+      const url = currentListId ? `/api/packing/phases?listId=${currentListId}` : "/api/packing/phases";
+      fetch(url, { method: "DELETE" }).catch(console.error);
     }
   };
 
@@ -204,7 +214,7 @@ export default function PhasesPage() {
     fetch("/api/packing/phases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phases: next }),
+      body: JSON.stringify({ phases: next, listId: currentListId }),
     }).catch(console.error);
   };
 
@@ -223,7 +233,7 @@ export default function PhasesPage() {
     fetch("/api/packing/phases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phases: next }),
+      body: JSON.stringify({ phases: next, listId: currentListId }),
     }).catch(console.error);
   };
 
@@ -250,7 +260,7 @@ export default function PhasesPage() {
             </div>
           </div>
           <div className="header-right">
-            <div className="trip-badge">✈️ Parents&apos; Home · 6 days</div>
+            <ListSelector currentListId={currentListId} onChange={setCurrentListId} />
             <div className="progress-area">
               <div className="progress-ring-container">
                 <svg className="progress-ring" viewBox="0 0 60 60">
