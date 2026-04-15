@@ -39,6 +39,7 @@ export default function PackingListPage() {
   const [mounted, setMounted] = useState(false);
   const [currentListId, setCurrentListId] = useState(null);
   const [addingSection, setAddingSection] = useState(false);
+  const [editingCatId, setEditingCatId] = useState(null);
 
   // Track newly created items (not yet in DB)
   const newItemIds = useRef(new Set());
@@ -213,6 +214,26 @@ export default function PackingListPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "update", itemId, fields: { bag: newBag } }),
     }).catch(console.error);
+  };
+
+  const handleEditSection = async (catId, fields) => {
+    setEditingCatId(null);
+    if (!fields.title?.trim()) return;
+    const next = categories.map((c) =>
+      c.id === catId ? { ...c, title: fields.title.trim(), icon: fields.icon || c.icon } : c
+    );
+    setCategories(next);
+    try {
+      const res = await fetch("/api/packing/categories", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId: catId, fields: { title: fields.title.trim(), icon: fields.icon || "📦" } }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to rename section: " + e.message);
+    }
   };
 
   const handleDeleteSection = async (catId, title) => {
@@ -453,12 +474,28 @@ export default function PackingListPage() {
           return (
             <section key={cat.id} className="category">
               <div className="category-header" style={{ "--cat-color": cat.color }}>
+                {editingCatId === cat.id ? (
+                  <SectionEditRow
+                    initialIcon={cat.icon}
+                    initialTitle={cat.title}
+                    onSave={(fields) => handleEditSection(cat.id, fields)}
+                    onCancel={() => setEditingCatId(null)}
+                  />
+                ) : (
                 <div className="category-title-area">
                   <span className="category-icon">{cat.icon}</span>
                   <h2 className="category-title">{cat.title}</h2>
                   <span className={`category-count ${allDone ? "done" : ""}`}>
                     {catChecked}/{filtered.length}
                   </span>
+                  <button
+                    className="category-edit-btn"
+                    onClick={() => setEditingCatId(cat.id)}
+                    title="Rename section"
+                    aria-label="Rename section"
+                  >
+                    <EditIcon />
+                  </button>
                   <button
                     className="category-delete-btn"
                     onClick={() => handleDeleteSection(cat.id, cat.title)}
@@ -468,6 +505,7 @@ export default function PackingListPage() {
                     <TrashIcon />
                   </button>
                 </div>
+                )}
                 <div className="category-progress-bar">
                   <div
                     className="category-progress-fill"
@@ -661,6 +699,47 @@ function EditRow({ item, catId, onSave, onCancel }) {
         </div>
       </div>
     </li>
+  );
+}
+
+// ── Edit Section Header (rename) ──────────────────────────
+function SectionEditRow({ initialIcon, initialTitle, onSave, onCancel }) {
+  const [title, setTitle] = useState(initialTitle || "");
+  const [icon, setIcon] = useState(initialIcon || "📦");
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+    titleRef.current?.select();
+  }, []);
+
+  const submit = () => {
+    if (!title.trim()) return;
+    onSave({ title, icon });
+  };
+
+  const onKey = (e) => {
+    if (e.key === "Enter") submit();
+    if (e.key === "Escape") onCancel();
+  };
+
+  return (
+    <div className="edit-form" style={{ width: "100%" }}>
+      <div className="edit-row">
+        <div className="edit-field edit-field-sm">
+          <label className="edit-field-label">Icon</label>
+          <input className="edit-input" value={icon} onChange={(e) => setIcon(e.target.value)} onKeyDown={onKey} maxLength={4} />
+        </div>
+        <div className="edit-field">
+          <label className="edit-field-label">Section name</label>
+          <input ref={titleRef} className="edit-input" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={onKey} />
+        </div>
+      </div>
+      <div className="edit-actions">
+        <button className="edit-save" onClick={submit}>✓ Save</button>
+        <button className="edit-cancel" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
   );
 }
 

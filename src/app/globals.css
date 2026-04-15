@@ -899,8 +899,8 @@ body::before {
   background: rgba(108, 99, 255, 0.05);
 }
 
+.category-edit-btn,
 .category-delete-btn {
-  margin-left: auto;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -911,6 +911,12 @@ body::before {
   display: inline-flex;
   align-items: center;
   transition: all 0.15s;
+}
+.category-edit-btn { margin-left: auto; }
+.category-edit-btn:hover {
+  opacity: 1;
+  color: var(--accent);
+  background: rgba(108,99,255,0.1);
 }
 .category-delete-btn:hover {
   opacity: 1;

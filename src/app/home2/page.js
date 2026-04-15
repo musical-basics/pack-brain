@@ -34,6 +34,7 @@ export default function Home2Page() {
   const [lists, setLists] = useState([]);
   const [bags, setBags] = useState(DEFAULT_BAGS);
   const [showBagsManager, setShowBagsManager] = useState(false);
+  const [editingCatId, setEditingCatId] = useState(null);
 
   const newItemIds = useRef(new Set());
   const dragState = useRef({ itemId: null, catId: null });
@@ -301,6 +302,26 @@ export default function Home2Page() {
     }
   };
 
+  const handleEditSection = async (catId, fields) => {
+    setEditingCatId(null);
+    if (!fields.title?.trim()) return;
+    const next = categories.map((c) =>
+      c.id === catId ? { ...c, title: fields.title.trim(), icon: fields.icon || c.icon } : c
+    );
+    setCategories(next);
+    try {
+      const res = await fetch("/api/packing/categories", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId: catId, fields: { title: fields.title.trim(), icon: fields.icon || "📦" } }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to rename section: " + e.message);
+    }
+  };
+
   const handleDeleteSection = async (catId, title) => {
     if (!confirm(`Delete section "${title}" and all its items?`)) return;
     setCategories(categories.filter((c) => c.id !== catId));
@@ -547,38 +568,53 @@ export default function Home2Page() {
               return (
                 <section key={cat.id} className={`${s.section} ${allDone ? s.sectionDone : ""}`}>
                   <div className={s.sectionHeader}>
-                    <div className={s.sectionTitleRow}>
-                      <div className={s.sectionTitleLeft}>
-                        <div className={s.sectionIconChip}>{cat.icon}</div>
-                        <h2 className={s.sectionTitle}>{cat.title}</h2>
+                    {editingCatId === cat.id ? (
+                      <EditSectionRow
+                        initialIcon={cat.icon}
+                        initialTitle={cat.title}
+                        onSave={(fields) => handleEditSection(cat.id, fields)}
+                        onCancel={() => setEditingCatId(null)}
+                      />
+                    ) : (
+                      <div className={s.sectionTitleRow}>
+                        <div className={s.sectionTitleLeft}>
+                          <div className={s.sectionIconChip}>{cat.icon}</div>
+                          <h2 className={s.sectionTitle}>{cat.title}</h2>
+                        </div>
+                        {allDone ? (
+                          <span className={s.sectionCountDone}>✓ Done</span>
+                        ) : (
+                          <span className={s.sectionCount}>{catChecked}/{filtered.length} packed</span>
+                        )}
+                        <div className={s.itemActions}>
+                          <button
+                            className={s.iconBtn}
+                            onClick={() => handleMoveSection(cat.id, "up")}
+                            disabled={catIdx === 0}
+                            aria-label="Move section up"
+                            title="Move section up"
+                          >▲</button>
+                          <button
+                            className={s.iconBtn}
+                            onClick={() => handleMoveSection(cat.id, "down")}
+                            disabled={catIdx === categories.length - 1}
+                            aria-label="Move section down"
+                            title="Move section down"
+                          >▼</button>
+                          <button
+                            className={s.iconBtn}
+                            onClick={() => setEditingCatId(cat.id)}
+                            aria-label="Edit section"
+                            title="Edit section"
+                          >✎</button>
+                          <button
+                            className={s.sectionDeleteBtn}
+                            onClick={() => handleDeleteSection(cat.id, cat.title)}
+                            title="Delete section"
+                          >🗑</button>
+                        </div>
                       </div>
-                      {allDone ? (
-                        <span className={s.sectionCountDone}>✓ Done</span>
-                      ) : (
-                        <span className={s.sectionCount}>{catChecked}/{filtered.length} packed</span>
-                      )}
-                      <div className={s.itemActions}>
-                        <button
-                          className={s.iconBtn}
-                          onClick={() => handleMoveSection(cat.id, "up")}
-                          disabled={catIdx === 0}
-                          aria-label="Move section up"
-                          title="Move section up"
-                        >▲</button>
-                        <button
-                          className={s.iconBtn}
-                          onClick={() => handleMoveSection(cat.id, "down")}
-                          disabled={catIdx === categories.length - 1}
-                          aria-label="Move section down"
-                          title="Move section down"
-                        >▼</button>
-                        <button
-                          className={s.sectionDeleteBtn}
-                          onClick={() => handleDeleteSection(cat.id, cat.title)}
-                          title="Delete section"
-                        >🗑</button>
-                      </div>
-                    </div>
+                    )}
                     <div className={s.sectionBar}>
                       <div className={s.sectionBarFill} style={{ width: `${pctFill}%` }} />
                     </div>
@@ -873,6 +909,40 @@ function EditRow({ item, catId, bags, onSave, onCancel }) {
         <button className={s.editSave} onClick={submit}>✓ Save</button>
       </div>
     </li>
+  );
+}
+
+// ── Inline edit-section ─────────────────────────────────
+function EditSectionRow({ initialTitle, initialIcon, onSave, onCancel }) {
+  const [title, setTitle] = useState(initialTitle || "");
+  const [icon, setIcon] = useState(initialIcon || "📦");
+  const titleRef = useRef(null);
+
+  useEffect(() => { titleRef.current?.focus(); titleRef.current?.select(); }, []);
+
+  const submit = () => {
+    if (!title.trim()) return;
+    onSave({ title, icon });
+  };
+  const onKey = (e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") onCancel(); };
+
+  return (
+    <div className={s.editPanel}>
+      <div className={s.editRow}>
+        <div className={`${s.editField} ${s.editFieldSm}`}>
+          <label className={s.editLabel}>Icon</label>
+          <input className={s.editInput} value={icon} onChange={(e) => setIcon(e.target.value)} onKeyDown={onKey} maxLength={4} />
+        </div>
+        <div className={s.editField}>
+          <label className={s.editLabel}>Section name</label>
+          <input ref={titleRef} className={s.editInput} value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={onKey} />
+        </div>
+      </div>
+      <div className={s.editActions}>
+        <button className={s.editCancel} onClick={onCancel}>Cancel</button>
+        <button className={s.editSave} onClick={submit}>✓ Save</button>
+      </div>
+    </div>
   );
 }
 
