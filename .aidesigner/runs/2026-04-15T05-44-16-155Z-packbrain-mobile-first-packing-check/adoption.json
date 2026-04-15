@@ -1,0 +1,52 @@
+{
+  "id": "2026-04-15T05-44-16-155Z-packbrain-mobile-first-packing-check",
+  "createdAt": "2026-04-15T05:44:20.382Z",
+  "repoRoot": "/Users/lionelyu/Documents/New Version/pack-brain",
+  "prompt": "PackBrain mobile-first packing checklist redesign — premium dark, ambient glows, 4-color bag tag system, bento bag tiles, dashed add-section card.",
+  "targetRouteHint": null,
+  "targetFileHint": null,
+  "detectedFrameworks": [
+    "Next.js",
+    "React"
+  ],
+  "componentLibraries": [],
+  "stylingSystems": [
+    "CSS variables"
+  ],
+  "routeCandidates": [
+    {
+      "route": "/api",
+      "score": 0
+    },
+    {
+      "route": "/phases",
+      "score": 0
+    }
+  ],
+  "tokenSources": [
+    "src/app/globals.css"
+  ],
+  "componentDirectories": [
+    "src/components"
+  ],
+  "htmlStructure": {
+    "title": "PackBrain - Premium Packing UI",
+    "primaryHeading": "PackBrain",
+    "sectionCount": 5,
+    "buttonCount": 10,
+    "formCount": 0,
+    "cardLikeCount": 0,
+    "hasNavigation": false,
+    "hasFooter": true,
+    "hasPricingSignals": false,
+    "hasDashboardSignals": false
+  },
+  "recommendations": [
+    "Start from the closest existing route instead of inventing a new app surface.",
+    "Port the artifact into Next.js route and component files instead of shipping a standalone HTML blob.",
+    "Break the artifact into section-level components before editing details.",
+    "Preserve existing CSS variables instead of introducing a parallel token set.",
+    "Use the generated preview as the visual truth source while porting the layout."
+  ],
+  "warnings": []
+}

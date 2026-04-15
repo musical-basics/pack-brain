@@ -378,6 +378,7 @@ export default function PackingListPage() {
         {/* Nav tabs */}
         <nav className="nav-tabs">
           <Link href={`/${listQuery}`} className={`nav-tab ${pathname === "/" ? "active" : ""}`}>📋 Packing List</Link>
+          <Link href={`/home2${listQuery}`} className={`nav-tab ${pathname === "/home2" ? "active" : ""}`}>✨ Home2</Link>
           <Link href={`/phases${listQuery}`} className={`nav-tab ${pathname === "/phases" ? "active" : ""}`}>🧠 AI Phases</Link>
         </nav>
       </header>

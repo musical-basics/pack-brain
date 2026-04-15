@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PackBrain - Premium Packing UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter','sans-serif'], display: ['Plus Jakarta Sans','sans-serif'] },
+                    colors: {
+                        bgBase: '#09090b',
+                        bgSurface: '#121216',
+                        bgElevated: '#1a1a21',
+                        accent: '#6366f1',
+                        accentGlow: '#818cf8',
+                        bagChecked: '#f43f5e',
+                        bagBackpack: '#0ea5e9',
+                        bagWorn: '#f59e0b',
+                        bagHome: '#d946ef'
+                    },
+                    boxShadow: {
+                        'neon': '0 0 15px rgba(99,102,241,0.3)',
+                        'inner-surface': 'inset 0 1px 0 0 rgba(255,255,255,0.05)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #000; background-image: radial-gradient(circle at 15% 0%, rgba(99,102,241,0.08) 0%, transparent 40%), radial-gradient(circle at 85% 100%, rgba(14,165,233,0.05) 0%, transparent 40%); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .mobile-frame { width: 100%; max-width: 400px; height: 100dvh; background-color: #09090b; position: relative; overflow-y: auto; overflow-x: hidden; border-left: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .check-container input:checked ~ .check-box { background-color: #6366f1; border-color: #6366f1; box-shadow: 0 0 10px rgba(99,102,241,0.4); }
+        .check-container input:checked ~ .check-box i { opacity: 1; transform: scale(1); }
+        .check-container input:checked ~ .item-content .item-title { color: #52525b; text-decoration: line-through; text-decoration-color: #52525b; }
+        .check-container input:checked ~ .item-meta { opacity: 0.4; }
+        .tag-checked  { color: #f43f5e; background-color: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.2); }
+        .tag-backpack { color: #0ea5e9; background-color: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2); }
+        .tag-worn { color: #f59e0b; background-color: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); }
+        .tag-home { color: #d946ef; background-color: rgba(217,70,239,0.1); border: 1px solid rgba(217,70,239,0.2); }
+        .border-dashed-animate { background-image: repeating-linear-gradient(to right, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 6px, transparent 6px, transparent 12px), repeating-linear-gradient(to right, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 6px, transparent 6px, transparent 12px), repeating-linear-gradient(to bottom, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 6px, transparent 6px, transparent 12px), repeating-linear-gradient(to bottom, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 6px, transparent 6px, transparent 12px); background-position: left top, left bottom, left top, right top; background-repeat: repeat-x, repeat-x, repeat-y, repeat-y; background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%; transition: all 0.3s ease; }
+        .progress-ring__circle { transition: stroke-dashoffset 0.8s cubic-bezier(0.65,0,0.35,1); transform: rotate(-90deg); transform-origin: 50% 50%; }
+    </style>
+</head>
+<body class="text-zinc-200">
+<div class="mobile-frame no-scrollbar sm:rounded-[2.5rem] sm:h-[90vh] sm:border sm:border-white/10">
+
+  <header class="sticky top-0 z-50 px-5 pt-8 pb-4 bg-bgBase/80 backdrop-blur-xl border-b border-white/5 flex items-end justify-between">
+    <div class="flex flex-col gap-1.5">
+      <h1 class="font-display font-bold text-2xl tracking-tight text-white flex gap-1.5 items-center">PackBrain<span class="w-1.5 h-1.5 rounded-full bg-accent mt-1"></span></h1>
+      <button class="flex items-center gap-1.5 bg-bgSurface border border-white/5 rounded-full px-3 py-1.5 w-max hover:bg-bgElevated transition-colors group">
+        <i class="ph-fill ph-house-line text-zinc-400 text-sm"></i>
+        <span class="text-xs font-medium text-zinc-300">Parents' Home · 6 days</span>
+        <i class="ph-bold ph-caret-down text-zinc-500 text-[10px] group-hover:text-zinc-300 transition-colors mt-px"></i>
+      </button>
+    </div>
+    <div class="relative w-12 h-12 flex items-center justify-center shrink-0">
+      <svg class="w-12 h-12" viewBox="0 0 44 44">
+        <circle class="text-white/5" stroke-width="4" stroke="currentColor" fill="transparent" r="18" cx="22" cy="22"/>
+        <circle class="progress-ring__circle text-accent" stroke-width="4" stroke-dasharray="113.097" stroke-dashoffset="36.1" stroke-linecap="round" stroke="currentColor" fill="transparent" r="18" cx="22" cy="22"/>
+      </svg>
+      <div class="absolute flex flex-col items-center justify-center">
+        <span class="text-[11px] font-display font-medium text-white">68%</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="px-5 pt-6 pb-24 flex flex-col gap-8">
+
+    <section class="grid grid-cols-2 gap-3">
+      <div class="bg-bgSurface rounded-2xl p-4 border border-white/5 shadow-inner-surface flex flex-col justify-between h-[92px] relative overflow-hidden group">
+        <div class="absolute top-0 right-0 w-16 h-16 bg-bagChecked/10 rounded-full blur-xl -mr-6 -mt-6"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <i class="ph-duotone ph-suitcase text-bagChecked text-xl"></i>
+          <span class="text-xs font-semibold text-zinc-100 bg-bgElevated px-2 py-0.5 rounded-full border border-white/5">12 left</span>
+        </div>
+        <p class="text-sm font-medium text-zinc-300 relative z-10">Checked Bag</p>
+      </div>
+      <div class="bg-bgSurface rounded-2xl p-4 border border-white/5 shadow-inner-surface flex flex-col justify-between h-[92px] relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-16 h-16 bg-bagBackpack/10 rounded-full blur-xl -mr-6 -mt-6"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <i class="ph-duotone ph-backpack text-bagBackpack text-xl"></i>
+          <span class="text-xs font-semibold text-zinc-100 bg-bgElevated px-2 py-0.5 rounded-full border border-white/5">4 left</span>
+        </div>
+        <p class="text-sm font-medium text-zinc-300 relative z-10">Backpack</p>
+      </div>
+      <div class="bg-bgBase rounded-2xl p-4 border border-bagWorn/20 flex flex-col justify-between h-[92px] relative overflow-hidden transition-all opacity-80 mix-blend-luminosity">
+        <div class="absolute inset-0 bg-bagWorn/[0.03]"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <i class="ph-duotone ph-t-shirt text-bagWorn text-xl"></i>
+          <i class="ph-fill ph-check-circle text-bagWorn text-lg bg-bgBase rounded-full"></i>
+        </div>
+        <p class="text-sm font-medium text-zinc-500 relative z-10 line-through">Worn Transit</p>
+      </div>
+      <div class="bg-bgSurface rounded-2xl p-4 border border-white/5 shadow-inner-surface flex flex-col justify-between h-[92px] relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-16 h-16 bg-bagHome/10 rounded-full blur-xl -mr-6 -mt-6"></div>
+        <div class="flex items-start justify-between relative z-10">
+          <i class="ph-duotone ph-armchair text-bagHome text-xl"></i>
+          <span class="text-xs font-semibold text-zinc-100 bg-bgElevated px-2 py-0.5 rounded-full border border-white/5">2 left</span>
+        </div>
+        <p class="text-sm font-medium text-zinc-300 relative z-10">Home Prep</p>
+      </div>
+    </section>
+
+    <section class="-mx-5 px-5">
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+        <button class="shrink-0 bg-accent text-white px-4 py-2 rounded-xl text-sm font-medium shadow-neon flex items-center gap-2">All Items<span class="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-md">42</span></button>
+        <button class="shrink-0 bg-bgSurface border border-white/5 text-zinc-400 px-4 py-2 rounded-xl text-sm font-medium">Remaining</button>
+        <button class="shrink-0 bg-bgSurface border border-bagChecked/20 text-zinc-300 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-bagChecked"></div>Checked</button>
+        <button class="shrink-0 bg-bgSurface border border-bagBackpack/20 text-zinc-300 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-bagBackpack"></div>Backpack</button>
+        <button class="shrink-0 bg-bgSurface border border-white/5 text-zinc-300 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 pr-6"><div class="w-2 h-2 rounded-full bg-bagHome"></div>Home</button>
+      </div>
+    </section>
+
+    <div class="flex flex-col gap-8">
+      <section class="flex flex-col gap-3">
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <div class="bg-bgElevated p-1.5 rounded-lg border border-white/5"><i class="ph-duotone ph-hanger text-zinc-300 text-lg"></i></div>
+              <h2 class="font-display font-semibold text-[15px] tracking-wide text-zinc-100">Clothes</h2>
+            </div>
+            <span class="text-xs font-medium text-zinc-500">6/8 packed</span>
+          </div>
+          <div class="h-[2px] w-full bg-bgElevated rounded-full overflow-hidden"><div class="h-full bg-zinc-200 w-[75%] rounded-full opacity-80"></div></div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="check-container cursor-pointer group flex items-start gap-3 p-3 -mx-3 rounded-2xl hover:bg-white/[0.02] transition-colors relative">
+            <input type="checkbox" class="peer sr-only" checked>
+            <div class="check-box w-6 h-6 shrink-0 rounded-[8px] border-[1.5px] border-zinc-600 bg-bgSurface flex items-center justify-center transition-all duration-200 mt-0.5"><i class="ph-bold ph-check text-white text-xs opacity-0 scale-50 transition-all duration-200"></i></div>
+            <div class="item-content flex-1 flex flex-col justify-center min-w-0 transition-opacity duration-300 mt-[1px]"><div class="flex items-center gap-2"><span class="item-title text-[15px] font-medium text-zinc-200 truncate transition-colors duration-300">Heavy Winter Coat</span></div></div>
+            <div class="item-meta flex items-center gap-2 shrink-0 transition-opacity duration-300 mt-[2px]"><span class="tag-worn text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md">Worn</span></div>
+          </label>
+          <label class="check-container cursor-pointer group flex items-start gap-3 p-3 -mx-3 rounded-2xl hover:bg-white/[0.02] transition-colors relative">
+            <input type="checkbox" class="peer sr-only">
+            <div class="check-box w-6 h-6 shrink-0 rounded-[8px] border-[1.5px] border-zinc-600 bg-bgSurface flex items-center justify-center transition-all duration-200 mt-0.5"><i class="ph-bold ph-check text-white text-xs opacity-0 scale-50 transition-all duration-200"></i></div>
+            <div class="item-content flex-1 flex flex-col justify-center min-w-0 transition-opacity duration-300 mt-[1px]"><div class="flex items-center gap-2"><span class="item-title text-[15px] font-medium text-zinc-200 truncate transition-colors duration-300">Merino Wool Socks</span><span class="shrink-0 bg-white/10 text-zinc-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">×6</span></div></div>
+            <div class="item-meta flex items-center gap-2 shrink-0 transition-opacity duration-300 mt-[2px]"><span class="tag-checked text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md">Checked</span></div>
+          </label>
+          <label class="check-container cursor-pointer group flex items-start gap-3 p-3 -mx-3 rounded-2xl hover:bg-white/[0.02] transition-colors relative">
+            <input type="checkbox" class="peer sr-only">
+            <div class="check-box w-6 h-6 shrink-0 rounded-[8px] border-[1.5px] border-zinc-600 bg-bgSurface flex items-center justify-center transition-all duration-200 mt-0.5"><i class="ph-bold ph-check text-white text-xs opacity-0 scale-50 transition-all duration-200"></i></div>
+            <div class="item-content flex-1 flex flex-col justify-center min-w-0 transition-opacity duration-300 mt-[1px]"><div class="flex items-center gap-2"><span class="item-title text-[15px] font-medium text-zinc-200 truncate transition-colors duration-300">Running Shoes</span></div><span class="text-xs text-zinc-500 mt-0.5 flex items-center gap-1"><i class="ph ph-info mt-[1px]"></i> Pack inside shower caps</span></div>
+            <div class="item-meta flex items-center gap-2 shrink-0 transition-opacity duration-300 mt-[2px]"><span class="tag-checked text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md">Checked</span></div>
+          </label>
+          <button class="w-full flex items-center gap-3 p-3 -mx-3 rounded-2xl text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.02] transition-all group mt-1"><div class="w-6 h-6 shrink-0 rounded-[8px] border border-dashed border-zinc-700 flex items-center justify-center group-hover:border-zinc-500 transition-colors"><i class="ph ph-plus text-xs"></i></div><span class="text-[14px] font-medium">Add item to Clothes</span></button>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3 opacity-60 mix-blend-luminosity">
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2"><div class="bg-bgElevated p-1.5 rounded-lg border border-accent/20"><i class="ph-duotone ph-broadcast text-accent text-lg"></i></div><h2 class="font-display font-semibold text-[15px] tracking-wide text-zinc-400">Streaming Setup</h2></div>
+            <span class="text-xs font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full flex items-center gap-1 border border-accent/20"><i class="ph-bold ph-check mt-px"></i> Done</span>
+          </div>
+          <div class="h-[2px] w-full bg-accent/20 rounded-full overflow-hidden"><div class="h-full bg-accent w-full rounded-full shadow-neon"></div></div>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3">
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2"><div class="bg-bgElevated p-1.5 rounded-lg border border-white/5"><i class="ph-duotone ph-plugs-connected text-zinc-300 text-lg"></i></div><h2 class="font-display font-semibold text-[15px] tracking-wide text-zinc-100">Tech & Cables</h2></div>
+            <span class="text-xs font-medium text-zinc-500">1/4 packed</span>
+          </div>
+          <div class="h-[2px] w-full bg-bgElevated rounded-full overflow-hidden"><div class="h-full bg-zinc-200 w-[25%] rounded-full opacity-80"></div></div>
+        </div>
+      </section>
+
+      <button class="border-dashed-animate w-full py-4 mt-4 rounded-2xl flex flex-col items-center justify-center gap-1 group">
+        <i class="ph ph-plus-circle text-zinc-500 text-xl"></i>
+        <span class="text-sm font-medium text-zinc-400">Create new section</span>
+      </button>
+    </div>
+  </main>
+
+  <footer class="px-5 pb-10 flex flex-col items-center gap-6 mt-auto">
+    <div class="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+    <div class="flex w-full gap-3">
+      <button class="flex-1 bg-bgSurface border border-white/5 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-medium text-zinc-300"><i class="ph-duotone ph-arrow-counter-clockwise"></i> Reset All</button>
+      <button class="flex-1 bg-bgSurface border border-white/5 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-medium text-zinc-300"><i class="ph-duotone ph-copy"></i> Copy List</button>
+    </div>
+    <p class="text-[11px] text-zinc-500 font-medium flex items-center gap-1.5"><i class="ph-fill ph-lightbulb text-bagWorn/70"></i> Drag items to reorder inside categories.</p>
+  </footer>
+</div>
+</body>
+</html>

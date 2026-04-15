@@ -1,0 +1,56 @@
+{
+  "repoRoot": "/Users/lionelyu/Documents/New Version/pack-brain",
+  "cwd": "/Users/lionelyu/Documents/New Version/pack-brain",
+  "stack": {
+    "frameworks": [
+      "Next.js",
+      "React"
+    ],
+    "componentLibraries": [],
+    "styling": [
+      "CSS variables"
+    ],
+    "componentDirectories": [
+      "src/components"
+    ],
+    "packageFiles": [
+      "package.json"
+    ]
+  },
+  "routes": [
+    "/api",
+    "/phases"
+  ],
+  "tokens": {
+    "sources": [
+      "src/app/globals.css"
+    ],
+    "tokens": [
+      "--bg-primary",
+      "--bg-secondary",
+      "--bg-card",
+      "--bg-card-hover",
+      "--bg-surface",
+      "--text-primary",
+      "--text-secondary",
+      "--text-muted",
+      "--border",
+      "--border-hover",
+      "--accent",
+      "--accent-glow",
+      "--success",
+      "--warning",
+      "--danger",
+      "--radius-sm",
+      "--radius-md",
+      "--radius-lg",
+      "--radius-xl",
+      "--shadow-sm",
+      "--shadow-md",
+      "--shadow-glow",
+      "--transition",
+      "--font"
+    ]
+  },
+  "summary": "Repo root: /Users/lionelyu/Documents/New Version/pack-brain\nWorking directory: /Users/lionelyu/Documents/New Version/pack-brain\nFrameworks: Next.js, React\nStyling: CSS variables\nComponent libraries: none detected\nRoute roots: src/app\nRoute candidates: /api, /phases\nComponent directories: src/components\nToken sources: src/app/globals.css\nVisible design language hints: app-router-friendly frontend, existing CSS tokens should be preserved"
+}
