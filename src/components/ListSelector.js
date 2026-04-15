@@ -109,6 +109,16 @@ export default function ListSelector({ currentListId, onChange }) {
           >
             + New list…
           </button>
+          <button
+            className="list-selector-option list-selector-back"
+            onClick={() => {
+              setOpen(false);
+              setStoredListId(null);
+              onChange?.(null);
+            }}
+          >
+            ← Back to list picker
+          </button>
         </div>
       )}
 

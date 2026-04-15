@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { DEFAULT_BAGS } from "@/lib/packingData";
-import { getUrlListId, setStoredListId } from "@/components/ListSelector";
+import { getStoredListId, setStoredListId } from "@/components/ListSelector";
 import ListPicker from "@/components/ListPicker";
+import StyleSwitcher from "@/components/StyleSwitcher";
+import { getStoredStyle } from "@/lib/prefs";
 import s from "./home2.module.css";
 
 // Convert #rrggbb into an rgba() string with the given alpha (0–1).
@@ -19,6 +21,7 @@ const alpha = (hex, a) => {
 
 export default function Home2Page() {
   const pathname = usePathname();
+  const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [activeFilter, setActiveFilter] = useState("all");
@@ -36,11 +39,17 @@ export default function Home2Page() {
   const dragState = useRef({ itemId: null, catId: null });
   const listMenuRef = useRef(null);
 
-  // Resolve list id from URL only — picker if missing
+  // Honor style preference first (redirect to Classic if that's what was picked),
+  // then resolve list id from URL → localStorage.
   useEffect(() => {
-    setCurrentListId(getUrlListId());
+    const style = getStoredStyle();
+    if (style === "classic") {
+      router.replace(`/${window.location.search}`);
+      return;
+    }
+    setCurrentListId(getStoredListId());
     setMounted(true);
-  }, []);
+  }, [router]);
 
   // Load list contents
   useEffect(() => {
@@ -438,13 +447,23 @@ export default function Home2Page() {
           </div>
         </header>
 
+        {/* ── Style switcher ────────────────────────── */}
+        <div className={s.styleRow}>
+          <StyleSwitcher
+            currentStyle="modern"
+            listQuery={listQuery}
+            classes={{
+              root: s.styleSwitcher,
+              btn: s.styleSwitcherBtn,
+              active: s.styleSwitcherActive,
+            }}
+          />
+        </div>
+
         {/* ── Nav tabs ───────────────────────────────── */}
         <nav className={s.nav}>
-          <Link href={`/${listQuery}`} className={`${s.navTab} ${pathname === "/" ? s.navTabActive : ""}`}>
-            📋 Packing
-          </Link>
           <Link href={`/home2${listQuery}`} className={`${s.navTab} ${pathname === "/home2" ? s.navTabActive : ""}`}>
-            ✨ Home2
+            📋 Packing
           </Link>
           <Link href={`/phases${listQuery}`} className={`${s.navTab} ${pathname === "/phases" ? s.navTabActive : ""}`}>
             🧠 Phases

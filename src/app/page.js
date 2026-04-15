@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   getBagLabel,
 } from "@/lib/packingData";
-import ListSelector, { getUrlListId, setStoredListId } from "@/components/ListSelector";
+import ListSelector, { getStoredListId, setStoredListId } from "@/components/ListSelector";
 import ListPicker from "@/components/ListPicker";
+import StyleSwitcher from "@/components/StyleSwitcher";
+import { getStoredStyle } from "@/lib/prefs";
 
 // ── Drag handle SVG ──────────────────────────────────────
 const GripIcon = () => (
@@ -28,6 +30,7 @@ const TrashIcon = () => (
 
 export default function PackingListPage() {
   const pathname = usePathname();
+  const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [activeFilter, setActiveFilter] = useState("all");
@@ -43,11 +46,18 @@ export default function PackingListPage() {
   // Drag state refs (no re-render needed)
   const dragState = useRef({ itemId: null, catId: null });
 
-  // Resolve list id from URL only — no list in URL means "show picker"
+  // Honor style preference first (redirect to Modern if that's what was picked),
+  // then resolve the list id from URL → localStorage. Picker only renders when
+  // both are empty (true first-time state).
   useEffect(() => {
-    setCurrentListId(getUrlListId());
+    const style = getStoredStyle();
+    if (style === "modern") {
+      router.replace(`/home2${window.location.search}`);
+      return;
+    }
+    setCurrentListId(getStoredListId());
     setMounted(true);
-  }, []);
+  }, [router]);
 
   // Load list contents whenever a list is selected
   useEffect(() => {
@@ -375,10 +385,14 @@ export default function PackingListPage() {
           </div>
         </div>
 
+        {/* Style switcher */}
+        <div className="style-switcher-row">
+          <StyleSwitcher currentStyle="classic" listQuery={listQuery} />
+        </div>
+
         {/* Nav tabs */}
         <nav className="nav-tabs">
           <Link href={`/${listQuery}`} className={`nav-tab ${pathname === "/" ? "active" : ""}`}>📋 Packing List</Link>
-          <Link href={`/home2${listQuery}`} className={`nav-tab ${pathname === "/home2" ? "active" : ""}`}>✨ Home2</Link>
           <Link href={`/phases${listQuery}`} className={`nav-tab ${pathname === "/phases" ? "active" : ""}`}>🧠 AI Phases</Link>
         </nav>
       </header>

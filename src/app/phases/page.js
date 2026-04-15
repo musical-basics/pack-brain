@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   getBagLabel,
 } from "@/lib/packingData";
-import ListSelector, { getUrlListId, setStoredListId } from "@/components/ListSelector";
+import ListSelector, { getStoredListId, setStoredListId } from "@/components/ListSelector";
 import ListPicker from "@/components/ListPicker";
 
 
@@ -28,9 +28,9 @@ export default function PhasesPage() {
   // Drag state for phase reordering
   const phaseDrag = useRef({ fromIdx: null });
 
-  // Resolve list id from URL only — no list in URL means "show picker"
+  // Resolve list id from URL → localStorage. Picker only shows if both empty.
   useEffect(() => {
-    setCurrentListId(getUrlListId());
+    setCurrentListId(getStoredListId());
     setMounted(true);
   }, []);
 
