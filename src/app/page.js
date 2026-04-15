@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import {
   getBagLabel,
 } from "@/lib/packingData";
-import ListSelector, { getStoredListId } from "@/components/ListSelector";
+import ListSelector, { getUrlListId, setStoredListId } from "@/components/ListSelector";
+import ListPicker from "@/components/ListPicker";
 
 // ── Drag handle SVG ──────────────────────────────────────
 const GripIcon = () => (
@@ -42,21 +43,22 @@ export default function PackingListPage() {
   // Drag state refs (no re-render needed)
   const dragState = useRef({ itemId: null, catId: null });
 
-  // Resolve initial list id from URL/localStorage on mount
+  // Resolve list id from URL only — no list in URL means "show picker"
   useEffect(() => {
-    setCurrentListId(getStoredListId());
+    setCurrentListId(getUrlListId());
+    setMounted(true);
   }, []);
 
-  // Load list contents whenever currentListId changes (after mount)
+  // Load list contents whenever a list is selected
   useEffect(() => {
-    if (!mounted && currentListId === null) {
-      // First render: still wait for the id-resolution effect to run
+    if (!currentListId) {
+      setCategories([]);
+      setCheckedItems(new Set());
+      return;
     }
-    const url = currentListId ? `/api/packing?listId=${currentListId}` : "/api/packing";
-    fetch(url, { cache: "no-store" })
+    fetch(`/api/packing?listId=${currentListId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        if (data.list && !currentListId) setCurrentListId(data.list.id);
         if (data.categories) {
           setCategories(data.categories);
           const checked = new Set();
@@ -66,9 +68,13 @@ export default function PackingListPage() {
           setCheckedItems(checked);
         }
       })
-      .catch((err) => console.error("Failed to load packing data:", err))
-      .finally(() => setMounted(true));
+      .catch((err) => console.error("Failed to load packing data:", err));
   }, [currentListId]);
+
+  const handlePick = (id) => {
+    setStoredListId(id);
+    setCurrentListId(id);
+  };
 
   // Close bag picker on outside click
   useEffect(() => {
@@ -320,6 +326,12 @@ export default function PackingListPage() {
 
   if (!mounted) return null;
 
+  if (!currentListId) {
+    return <ListPicker onPick={handlePick} />;
+  }
+
+  const listQuery = `?list=${currentListId}`;
+
   return (
     <div className="app">
       {/* Header */}
@@ -353,8 +365,8 @@ export default function PackingListPage() {
 
         {/* Nav tabs */}
         <nav className="nav-tabs">
-          <Link href="/" className={`nav-tab ${pathname === "/" ? "active" : ""}`}>📋 Packing List</Link>
-          <Link href="/phases" className={`nav-tab ${pathname === "/phases" ? "active" : ""}`}>🧠 AI Phases</Link>
+          <Link href={`/${listQuery}`} className={`nav-tab ${pathname === "/" ? "active" : ""}`}>📋 Packing List</Link>
+          <Link href={`/phases${listQuery}`} className={`nav-tab ${pathname === "/phases" ? "active" : ""}`}>🧠 AI Phases</Link>
         </nav>
       </header>
 

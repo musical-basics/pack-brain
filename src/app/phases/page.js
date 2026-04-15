@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import {
   getBagLabel,
 } from "@/lib/packingData";
-import ListSelector, { getStoredListId } from "@/components/ListSelector";
+import ListSelector, { getUrlListId, setStoredListId } from "@/components/ListSelector";
+import ListPicker from "@/components/ListPicker";
 
 
 export default function PhasesPage() {
@@ -27,18 +28,24 @@ export default function PhasesPage() {
   // Drag state for phase reordering
   const phaseDrag = useRef({ fromIdx: null });
 
-  // Resolve initial list id
+  // Resolve list id from URL only — no list in URL means "show picker"
   useEffect(() => {
-    setCurrentListId(getStoredListId());
+    setCurrentListId(getUrlListId());
+    setMounted(true);
   }, []);
 
   // Reload list contents when currentListId changes
   useEffect(() => {
-    const url = currentListId ? `/api/packing?listId=${currentListId}` : "/api/packing";
-    fetch(url, { cache: "no-store" })
+    if (!currentListId) {
+      setCategories([]);
+      setCheckedItems(new Set());
+      setPhases(null);
+      setExpandedPhases(new Set());
+      return;
+    }
+    fetch(`/api/packing?listId=${currentListId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        if (data.list && !currentListId) setCurrentListId(data.list.id);
         if (data.categories) {
           setCategories(data.categories);
           const checked = new Set();
@@ -47,7 +54,6 @@ export default function PhasesPage() {
           );
           setCheckedItems(checked);
         }
-        // Reset phases for the newly loaded list
         if (data.phases && data.phases.length > 0) {
           setPhases(data.phases);
           setExpandedPhases(new Set([0]));
@@ -56,9 +62,13 @@ export default function PhasesPage() {
           setExpandedPhases(new Set());
         }
       })
-      .catch((err) => console.error("Failed to load packing data:", err))
-      .finally(() => setMounted(true));
+      .catch((err) => console.error("Failed to load packing data:", err));
   }, [currentListId]);
+
+  const handlePick = (id) => {
+    setStoredListId(id);
+    setCurrentListId(id);
+  };
 
   useEffect(() => {
     // Fetch available models from providers (once)
@@ -247,6 +257,12 @@ export default function PhasesPage() {
 
   if (!mounted) return null;
 
+  if (!currentListId) {
+    return <ListPicker onPick={handlePick} />;
+  }
+
+  const listQuery = `?list=${currentListId}`;
+
   return (
     <div className="app">
       {/* Header */}
@@ -279,8 +295,8 @@ export default function PhasesPage() {
         </div>
 
         <nav className="nav-tabs">
-          <Link href="/" className={`nav-tab ${pathname === "/" ? "active" : ""}`}>📋 Packing List</Link>
-          <Link href="/phases" className={`nav-tab ${pathname === "/phases" ? "active" : ""}`}>🧠 AI Phases</Link>
+          <Link href={`/${listQuery}`} className={`nav-tab ${pathname === "/" ? "active" : ""}`}>📋 Packing List</Link>
+          <Link href={`/phases${listQuery}`} className={`nav-tab ${pathname === "/phases" ? "active" : ""}`}>🧠 AI Phases</Link>
         </nav>
       </header>
 

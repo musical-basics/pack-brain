@@ -16,6 +16,17 @@ export function getStoredListId() {
   }
 }
 
+// URL-only — does NOT fall back to localStorage. Used by the home picker so
+// visiting / always presents the chooser unless a list is explicitly in the URL.
+export function getUrlListId() {
+  if (typeof window === "undefined") return null;
+  try {
+    return new URL(window.location.href).searchParams.get("list");
+  } catch {
+    return null;
+  }
+}
+
 export function setStoredListId(id) {
   if (typeof window === "undefined") return;
   try {
@@ -118,7 +129,7 @@ export default function ListSelector({ currentListId, onChange }) {
   );
 }
 
-function NewListDialog({ lists, defaultSourceId, onClose, onCreated }) {
+export function NewListDialog({ lists, defaultSourceId, onClose, onCreated }) {
   const [title, setTitle] = useState("");
   const [destination, setDestination] = useState("");
   const [days, setDays] = useState("");
